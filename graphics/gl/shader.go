@@ -1,3 +1,3 @@
 package gl
 
-func CompileShader//TODO
+func CompileShader//TODO wip file
