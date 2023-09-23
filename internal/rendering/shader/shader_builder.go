@@ -58,7 +58,7 @@ The following keywords will be replaced:
 '<attributes>' instance data, should only be used once
 '<uniforms>' uniforms, should only be used once
 '<functions>' function declarations, should only be used once
-'<variabless>' variables, should only be used once
+'<variables>' variables, should only be used once
 '<calls>' function calls, should only be used once
 '<pos>' output position variable, this should not be modified
 '<layer>' output layer variable, this should not be modified
@@ -67,9 +67,10 @@ The following keywords will be replaced:
 */
 func NewShaderBuilder(baseSource string, done func(string) (r.Procedure, error)) r.ProcedureBuilder {
 	return &shaderBuilder{
-		baseSource:  baseSource,
-		done:        done,
-		chanID:      0,
+		baseSource: baseSource,
+		done:       done,
+		// 0 means not set
+		chanID:      1,
 		interChans:  make([]interChannel, 0),
 		attribChans: make([]glslChannel, 0),
 		operChans:   make([]glslChannel, 0),
@@ -193,10 +194,12 @@ func (s *shaderBuilder) makeUniformSection() string {
 }
 
 func (s *shaderBuilder) getFunctions() []*r.Function {
+	// make set of functions
 	funcSet := make(map[*r.Function]bool, 0)
 	for _, call := range s.calls {
 		funcSet[call.fun] = true
 	}
+	// convert set to list
 	keys := make([]*r.Function, 0, len(funcSet))
 	for f := range funcSet {
 		keys = append(keys, f)
@@ -205,9 +208,107 @@ func (s *shaderBuilder) getFunctions() []*r.Function {
 }
 
 func (s *shaderBuilder) makeDeclarationSection() string {
+	var sb strings.Builder
+	for _, function := range s.getFunctions() {
+		sb.WriteString(function.Source + "\n")
+	}
+	return sb.String()
+}
 
+func (s *shaderBuilder) makeVariablesSection() string {
+	var sb strings.Builder
+	for _, variable := range s.interChans {
+		// '<type> <name>'
+		sb.WriteString(fmt.Sprintf("%v %v", getGLSLTypeName(variable.varType), GetChannelName(variable)))
+		if variable.expr != "" {
+			// '= <expression>'
+			sb.WriteString("= " + variable.expr)
+		}
+		sb.WriteString(";\n")
+	}
+	return sb.String()
+}
+
+func (s *shaderBuilder) makeCallsSection() string {
+	var sb strings.Builder
+	// calls
+	for _, call := range s.calls {
+		sb.WriteString(call.fun.Name + "(")
+		// parameters
+		for _, param := range call.params {
+			sb.WriteString(getVarName(param) + ", ")
+		}
+		sb.WriteString(");\n")
+	}
+	return sb.String()
+}
+
+// takes a shader to then replace section keywords with generated code
+// it expects a shader because other edits might be made to the baseSource before this
+func (s *shaderBuilder) composeSections(shader string) (string, error) {
+	sections := [][2]string{
+		{"<attributes>", s.makeAtrribSection()},
+		{"<uniforms>", s.makeUniformSection()},
+		{"<functions>", s.makeDeclarationSection()},
+		{"<variables>", s.makeVariablesSection()},
+		{"<calls>", s.makeCallsSection()},
+	}
+
+	for _, section := range sections {
+		if count := strings.Count(shader, section[0]); count != 1 {
+			return "", errors.New(fmt.Sprintf("Expected %v once, found it %v times", section[0], count))
+		}
+		// should only contain section[0] once
+		shader = strings.Replace(shader, section[0], section[1], 1)
+	}
+
+	return shader, nil
+}
+
+func (s *shaderBuilder) composeVars(shader string) (string, error) {
+	// assert builder
+	if s.layerID == 0 || s.posID == 0 {
+		return "", errors.New("Both layer and position must be set")
+	}
+
+	// get x and y axis values
+	xAxis, yAxis := "vec2(1, 0)", "vec2(0, 1)"
+
+	if s.xAxisID != 0 {
+		xAxis = getVarName(s.xAxisID)
+	}
+	if s.yAxisID != 0 {
+		yAxis = getVarName(s.yAxisID)
+	}
+
+	// compose
+	shader = strings.ReplaceAll(shader, "<xAxis>", xAxis)
+	shader = strings.ReplaceAll(shader, "<yAxis>", yAxis)
+	shader = strings.ReplaceAll(shader, "<pos>", getVarName(s.posID))
+	shader = strings.ReplaceAll(shader, "<layer>", getVarName(s.layerID))
+
+	return shader, nil
+}
+
+func (s *shaderBuilder) composeShader() (string, error) {
+	// sections
+	shader, err := s.composeSections(s.baseSource)
+	if err != nil {
+		return "", err
+	}
+	// vars
+	shader, err = s.composeVars(shader)
+	if err != nil {
+		return "", err
+	}
+	// make sure to properly end shader with escape char
+	return shader + "\x00", nil
 }
 
 func (s *shaderBuilder) Finish() (r.Procedure, error) {
-	panic("not implemented") // TODO: Implement
+	shader, err := s.composeShader()
+	if err != nil {
+		return nil, err
+	}
+	return s.done(shader)
 }
