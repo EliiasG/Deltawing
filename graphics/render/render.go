@@ -43,28 +43,19 @@ type ShaderType struct {
 	Amount uint8
 }
 
-type ChannelDescription struct {
-	InputType  ChannelInputType
-	ShaderType ShaderType
-}
-
 // Modifies and reads from channels
 type Function struct {
 	Parameters []ShaderType
 	Source     string
+	Name       string
 }
 
-func Param(t ChannelShaderType, amt uint8) ShaderType {
+func Type(t ChannelShaderType, amt uint8) ShaderType {
 	return ShaderType{t, amt}
 }
 
-func NewFunction(source string, params ...ShaderType) *Function {
-	return &Function{params, source}
-}
-
-//Used to describe a channel
-func Chan(inType ChannelInputType, shaderType ChannelShaderType, amount uint8) ChannelDescription {
-	return ChannelDescription{inType, Param(shaderType, amount)}
+func NewFunction(source, name string, params ...ShaderType) *Function {
+	return &Function{params, source, name}
 }
 
 type RendererObject interface {
@@ -110,9 +101,10 @@ type RenderTarget interface {
 	RendererObject
 	Width() uint16
 	Height() uint16
-
-	// Draw on other RenderTarget with given position, size, rotation and pivot, pivot is realative to given size
-	DrawTo(target RenderTarget, x, y, width, height, pivotX, pivotY uint16, rotation float32)
+	// Draw on other RenderTarget using bliting
+	BlitTo(target RenderTarget, x, y, width, height uint16)
+	// Draw on other RenderTarget with given shader,position, size, rotation and pivot, pivot is realative to given size
+	DrawTo(target RenderTarget, x, y, width, height, pivotX, pivotY uint16, rotation float32, shader FragmentShader)
 }
 
 // Describes how to transform a sprite from the given data
@@ -128,22 +120,33 @@ func (s ProcedureIdentifyer) procedure() {
 	panic("should never be called")
 }
 
-type Channel any
+type Channel interface {
+	// the hack once again
+	channel()
+}
+
+type ChannelIdentifyer struct{}
+
+func (s ChannelIdentifyer) channel() {
+	panic("should never be called")
+}
 
 type ProcedureBuilder interface {
 	// A channel that is neither initialized per operation, nor per sprite
 	// 'expression' specifies the default value, as a GLSL expression
-	// Description is Shadertype because it does not have a input type
+	// Description is Shadertype because the input data is not realavent to the shader
 	AddIntermediateChannel(shaderType ShaderType, expression string) Channel
 
 	// A channel initialized per sprite, this is called an attribute for the drawn sprite
-	AddAttributeChannel(description ChannelDescription) Channel
+	// These channels may only be read from
+	AddAttributeChannel(shaderType ShaderType) Channel
 
 	// A channel initialized per operation
-	AddOperationChannel(description ChannelDescription) Channel
+	// These channels may only be read from
+	AddOperationChannel(shaderType ShaderType) Channel
 
 	// Adds a function, keep in mind that order matters
-	AddFunction(function Function, channels ...Channel) error
+	CallFunction(function *Function, channels ...Channel) error
 
 	// Sets the channel to use for the position, must be 2 ints
 	SetPositionChannel(channel Channel) error
@@ -151,7 +154,7 @@ type ProcedureBuilder interface {
 	// Set the channel to use for the layer, must be an int
 	SetLayerChannel(channel Channel) error
 
-	// Use following methods for scaling and rotation, must be floats
+	// Use following methods for scaling and rotation, must be 2 floats per channel
 	// Before translation, every vertex in a sprite will be recalculated with the following formula: (XAxis * x + YAxis * y) where x and y is the original position
 	SetXAxisChannel(channel Channel) error
 	SetYAxisChannel(channel Channel) error
@@ -175,11 +178,28 @@ type Opteration interface {
 	DrawTo(target RenderTarget)
 }
 
+type FragmentShader interface {
+	// the hack once again
+	fragmentShader()
+}
+
+type FragmentShaderIdentifyer struct{}
+
+func (s FragmentShaderIdentifyer) fragmentShader() {
+	panic("should never be called")
+}
+
 type Renderer interface {
 	MakeDataBuffer() DataBuffer
 	MakeSpriteBufferBuilder() SpriteBufferBuilder
 	MakeRenderTarget() RenderTarget
 	MakeProcedureBuilder() ProcedureBuilder
 	MakeOperation(Procedure) Opteration
+	// Only allows simple shaders for small effects, because the input data is not modifiable
+	// Expects a GLSL function that with the following parameters:
+	// in original: sampler2d
+	// in uv:       vec2
+	// out color:   vec4
+	MakeFragmentShader(source string) FragmentShader
 	PrimaryRenderTarget() RenderTarget
 }
