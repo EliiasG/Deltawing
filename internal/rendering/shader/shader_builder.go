@@ -45,6 +45,8 @@ type shaderBuilder struct {
 	attribChans []glslChannel
 	operChans   []glslChannel
 	calls       []funcCall
+	// start position of layout
+	startPos uint8
 	// IDs for output channels, only storing ID as it is the only requirement for getting the var name
 	posID   uint16
 	layerID uint16
@@ -65,7 +67,7 @@ The following keywords will be replaced:
 '<xAxis>' output xAxis variable, this should not be modified
 '<yAxis>' output xAxis variable, this should not be modified
 */
-func NewShaderBuilder(baseSource string, done func(string) (r.Procedure, error)) r.ProcedureBuilder {
+func NewShaderBuilder(baseSource string, startPos uint8, done func(string) (r.Procedure, error)) r.ProcedureBuilder {
 	return &shaderBuilder{
 		baseSource: baseSource,
 		done:       done,
@@ -180,7 +182,7 @@ func getGLSLTypeName(typ r.ShaderType) string {
 func (s *shaderBuilder) makeAtrribSection() string {
 	var sb strings.Builder
 	for i, channel := range s.attribChans {
-		sb.WriteString(fmt.Sprintf("layout(location=%v) %v %v;\n", i, getGLSLTypeName(channel.varType), GetChannelName(channel)))
+		sb.WriteString(fmt.Sprintf("layout(location=%v) %v %v;\n", i+int(s.startPos), getGLSLTypeName(channel.varType), GetChannelName(channel)))
 	}
 	return sb.String()
 }
@@ -302,7 +304,11 @@ func (s *shaderBuilder) composeShader() (string, error) {
 		return "", err
 	}
 	// make sure to properly end shader with escape char
-	return shader + "\x00", nil
+	if shader[len(shader)-1] != '\x00' {
+		shader += "\x00"
+	}
+
+	return shader, nil
 }
 
 func (s *shaderBuilder) Finish() (r.Procedure, error) {

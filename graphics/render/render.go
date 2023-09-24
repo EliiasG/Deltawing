@@ -43,6 +43,12 @@ type ShaderType struct {
 	Amount uint8
 }
 
+type InputType struct {
+	Type ChannelInputType
+	// must be 1, 2, 3 or 4
+	Amount uint8
+}
+
 // Modifies and reads from channels
 type Function struct {
 	Parameters []ShaderType
@@ -54,6 +60,10 @@ func Type(t ChannelShaderType, amt uint8) ShaderType {
 	return ShaderType{t, amt}
 }
 
+func Input(t ChannelInputType, amt uint8) InputType {
+	return InputType{t, amt}
+}
+
 func NewFunction(source, name string, params ...ShaderType) *Function {
 	return &Function{params, source, name}
 }
@@ -62,17 +72,20 @@ type RendererObject interface {
 	Free()
 }
 
-// Describes layout of buffer
-// If the data changes often then it should likely only contain one attribute
-// For more static data it might be worth combining multiple attributes into a single buffer
-type DataBufferLayout *[]ChannelInputType
-
 // Used to tarnsform sprites
-// Can (and should when possible) be used for multiple sprites
+// Can (and should when possible) be used for multiple different sprites
+// Must be generic because of how go interfaces work, if you wish to combine types just convert them to bytes or something
 type DataBuffer interface {
 	RendererObject
-	SetData(*[]any)
-	SetLayout(DataBufferLayout)
+	// Very smart to not support generic methods
+	SetData8(data []uint8)
+	SetData16(data []uint16)
+	SetData32(data []uint32)
+	SetData64(dara []uint64)
+	// Describes layout of buffer
+	// If the data changes often then it should likely only contain one attribute
+	// For static data it might be worth combining multiple attributes into a single buffer
+	SetLayout(layout ...InputType)
 	// TODO maybe add method to replace only parts of data?
 }
 
@@ -92,7 +105,7 @@ func (s SpriteBufferIdentifyer) spriteBuffer() {
 }
 
 type SpriteBufferBuilder interface {
-	AddSprite(sprite vecsprite.VecSprite) uint32
+	AddSprite(sprite *vecsprite.VecSprite) uint32
 	Finish() SpriteBuffer
 }
 
@@ -168,7 +181,7 @@ type Opteration interface {
 	RendererObject
 	// Supply the next attribute for the procedure, this should be called as many times as the procedure has attributes
 	// The attribute added to the ProcedureBuilder first will be supplied first
-	// Offset says where in the DataBuffer to start, and the index says what data from the DataBuffer to use
+	// Offset says where in the DataBuffer to start, and the index says what data from the DataBufferLayout to use
 	AddInstanceAttribute(DataBuffer, offset uint32, index uint16)
 
 	// Set a OperationChannel returned by ProcedureBuilder.AddOperationChannel()
@@ -190,13 +203,14 @@ func (s FragmentShaderIdentifyer) fragmentShader() {
 }
 
 type Renderer interface {
-	MakeDataBuffer() DataBuffer
+	// if static is true buffer is optimized to be only written to once
+	MakeDataBuffer(static bool) DataBuffer
 	MakeSpriteBufferBuilder() SpriteBufferBuilder
 	MakeRenderTarget() RenderTarget
 	MakeProcedureBuilder() ProcedureBuilder
-	MakeOperation(Procedure) Opteration
+	MakeOperation(procedure Procedure) Opteration
 	// Only allows simple shaders for small effects, because the input data is not modifiable
-	// Expects a GLSL function that with the following parameters:
+	// Expects a function that with the following parameters:
 	// in original: sampler2d
 	// in uv:       vec2
 	// out color:   vec4

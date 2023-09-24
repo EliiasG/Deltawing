@@ -11,42 +11,47 @@ import (
 )
 
 type VecSprite struct {
-	vertices []vec.Vec2[float32]
-	indices  []uint32
-	colors   []color.Color
+	// per vertex
+	Vertices []vec.Vec2[float32]
+	Colors   []color.Color
+	Layers   []uint8
+	// indices
+	Indices []uint32
 }
 
 // Descrition of tris format can be found at the bottom of this readme https://github.com/EliiasG/MonoGameDrawingApp#readme
 func FromBytes(reader io.ByteReader) (*VecSprite, error) {
-	verts, colors, e := readVerts(reader)
+	verts, colors, layers, e := readVerts(reader)
 	if e != nil {
 		return nil, e
 	}
 	inds := readInds(reader)
-	return &VecSprite{verts, inds, colors}, nil
+	return &VecSprite{verts, colors, layers, inds}, nil
 }
 
 func readInds(reader io.ByteReader) []uint32 {
 	inds := make([]uint32, 0)
 	for true {
-		ind, e := readUint(reader)
+		idx, e := readUint(reader)
 		if e != nil {
 			return inds
 		}
-		inds = append(inds, ind)
+		inds = append(inds, idx)
 	}
 	//should never happen
 	return nil
 
 }
 
-func readVerts(reader io.ByteReader) ([]vec.Vec2[float32], []color.Color, error) {
+func readVerts(reader io.ByteReader) ([]vec.Vec2[float32], []color.Color, []uint8, error) {
 	verts := make([]vec.Vec2[float32], 0)
 	colors := make([]color.Color, 0)
+	layers := make([]uint8, 0)
 	colorChanges := true
 
 	// color is not updated every vertex, a color is only given when it changes
 	var curColor color.Color
+	var layer uint8 = 0
 	for true {
 		// ignoring error to catch at end, even if it ends at start it would be fine to continue
 		if colorChanges {
@@ -59,21 +64,25 @@ func readVerts(reader io.ByteReader) ([]vec.Vec2[float32], []color.Color, error)
 		change, e := reader.ReadByte()
 		// 0 means no color change, 1 means color change, and 2 means no more vertices, so any value over 2 is invalid
 		if e != nil || change > 2 {
-			return nil, nil, errors.New("Invalid bytes for vector sprite")
+			return nil, nil, nil, errors.New("Invalid bytes for vector sprite")
 		}
 
 		verts = append(verts, vec.MakeVec2(x, y))
 		colors = append(colors, curColor)
+		layers = append(layers, layer)
 		colorChanges = change == 1
+		if change == 1 {
+			layer++
+		}
 
 		// change is 2 when verices section is done
 		if change == 2 {
-			return verts, colors, nil
+			return verts, colors, layers, nil
 		}
 	}
 
 	//should never happen
-	return nil, nil, errors.New("oops")
+	return nil, nil, nil, errors.New("oops")
 }
 
 func readFloat(reader io.ByteReader) (float32, error) {
