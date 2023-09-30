@@ -2,11 +2,15 @@
 // maybe that will be changed in case special features are needed for desktop
 #version 300 es
 precision mediump float;
-layout(location = 0) in vec3 aPos;
-// color.w/a is layer
-layout(location = 1) in vec4 color;
+layout(location = 0) in vec2 aPos;
+// color.w/a/q is layer
+layout(location = 1) in ivec4 aColor;
 // layouts from channels
 <attributes>
+
+out vec4 vertexColor;
+out uint layer;
+
 // uniforms from channels
 <uniforms>
 
@@ -22,10 +26,11 @@ void main() {
 
     gl_Position = vec4(
         // position
-        (<xAxis> * aPos.x + <yAxis> * aPos.y + pos),
-        // layer
-        // TODO
-        (<layer>*256 + color.w*255),
-        1.0
-    )
+        (<xAxis> * aPos.x + <yAxis> * aPos.y + <pos>),
+        0, 1.0
+    );
+
+    // TODO maybe add modulate like godot
+    vertexColor = vec4(aColor.rgb, 1);
+    layer = <layer>*256 + aColor.a;
 }

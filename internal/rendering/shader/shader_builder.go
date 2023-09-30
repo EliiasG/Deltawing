@@ -10,7 +10,7 @@ import (
 )
 
 type glslChannel struct {
-	r.ChannelIdentifyer
+	r.ChannelIdentifier
 	id      uint16
 	varType r.ShaderType
 }
@@ -67,16 +67,17 @@ The following keywords will be replaced:
 '<xAxis>' output xAxis variable, this should not be modified
 '<yAxis>' output xAxis variable, this should not be modified
 */
-func NewShaderBuilder(baseSource string, startPos uint8, done func(string) (r.Procedure, error)) r.ProcedureBuilder {
+func NewShaderBuilder(baseSource string, layoutStartPos uint8, done func(string) (r.Procedure, error)) r.ProcedureBuilder {
 	return &shaderBuilder{
 		baseSource: baseSource,
 		done:       done,
-		// 0 means not set
+		// start index of channels, 0 is used unset channels
 		chanID:      1,
 		interChans:  make([]interChannel, 0),
 		attribChans: make([]glslChannel, 0),
 		operChans:   make([]glslChannel, 0),
 		calls:       make([]funcCall, 0),
+		startPos:    layoutStartPos,
 	}
 }
 

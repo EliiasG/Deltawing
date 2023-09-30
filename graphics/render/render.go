@@ -1,6 +1,8 @@
 package render
 
-import "github.com/eliiasg/deltawing/graphics/vecsprite"
+import (
+	"github.com/eliiasg/deltawing/graphics/vecsprite"
+)
 
 type ChannelInputType uint8
 
@@ -10,7 +12,7 @@ type ChannelShaderType uint8
 const (
 	// int8
 	InputByte ChannelInputType = iota
-	InputUnsignedbyte
+	InputUnsignedByte
 	// int16
 	InputShort
 	InputUnsignedShort
@@ -47,6 +49,23 @@ type InputType struct {
 	Type ChannelInputType
 	// must be 1, 2, 3 or 4
 	Amount uint8
+}
+
+func SizeOf(typ InputType) uint8 {
+	var r uint8
+	switch typ.Type {
+	case InputByte, InputUnsignedByte:
+		r = 1
+	case InputShort, InputUnsignedShort:
+		r = 2
+	case InputInt, InputUnsignedInt, InputFloat:
+		r = 4
+	case InputDouble:
+		r = 8
+	default:
+		return 0
+	}
+	return r * typ.Amount
 }
 
 // Modifies and reads from channels
@@ -98,9 +117,9 @@ type SpriteBuffer interface {
 	spriteBuffer()
 }
 
-type SpriteBufferIdentifyer struct{}
+type SpriteBufferIdentifier struct{}
 
-func (s SpriteBufferIdentifyer) spriteBuffer() {
+func (s SpriteBufferIdentifier) spriteBuffer() {
 	panic("should never be called")
 }
 
@@ -114,8 +133,10 @@ type RenderTarget interface {
 	RendererObject
 	Width() uint16
 	Height() uint16
+	Clear(r, g, b uint8)
+	Resize(width, height uint16)
 	// Draw on other RenderTarget using bliting
-	BlitTo(target RenderTarget, x, y, width, height uint16)
+	BlitTo(target RenderTarget, x, y uint16)
 	// Draw on other RenderTarget with given shader,position, size, rotation and pivot, pivot is realative to given size
 	DrawTo(target RenderTarget, x, y, width, height, pivotX, pivotY uint16, rotation float32, shader FragmentShader)
 }
@@ -127,9 +148,9 @@ type Procedure interface {
 	procedure()
 }
 
-type ProcedureIdentifyer struct{}
+type ProcedureIdentifier struct{}
 
-func (s ProcedureIdentifyer) procedure() {
+func (s ProcedureIdentifier) procedure() {
 	panic("should never be called")
 }
 
@@ -138,9 +159,9 @@ type Channel interface {
 	channel()
 }
 
-type ChannelIdentifyer struct{}
+type ChannelIdentifier struct{}
 
-func (s ChannelIdentifyer) channel() {
+func (s ChannelIdentifier) channel() {
 	panic("should never be called")
 }
 
@@ -177,15 +198,21 @@ type ProcedureBuilder interface {
 }
 
 // Describes how to draw sprites, this is more specfic than the precedure, because the procedure only says how to use data, and this says what data to use
-type Opteration interface {
+type Operation interface {
 	RendererObject
 	// Supply the next attribute for the procedure, this should be called as many times as the procedure has attributes
 	// The attribute added to the ProcedureBuilder first will be supplied first
 	// Offset says where in the DataBuffer to start, and the index says what data from the DataBufferLayout to use
-	AddInstanceAttribute(DataBuffer, offset uint32, index uint16)
+	AddInstanceAttribute(buffer DataBuffer, offset uint32, index uint16)
 
 	// Set a OperationChannel returned by ProcedureBuilder.AddOperationChannel()
 	SetChannelValue(channel Channel, data any)
+
+	// Set sprite given buffer and index returned by SpriteBufferBuilder.AddSprite()
+	SetSprite(buffer SpriteBuffer, id uint32)
+
+	// Set the amount of sprites to draw, if this is longer than the avalible buffers the result is undefined
+	SetAmount(amount uint32)
 
 	// Runs the operation and reads the buffers
 	DrawTo(target RenderTarget)
@@ -196,9 +223,9 @@ type FragmentShader interface {
 	fragmentShader()
 }
 
-type FragmentShaderIdentifyer struct{}
+type FragmentShaderIdentifier struct{}
 
-func (s FragmentShaderIdentifyer) fragmentShader() {
+func (s FragmentShaderIdentifier) fragmentShader() {
 	panic("should never be called")
 }
 
@@ -206,9 +233,9 @@ type Renderer interface {
 	// if static is true buffer is optimized to be only written to once
 	MakeDataBuffer(static bool) DataBuffer
 	MakeSpriteBufferBuilder() SpriteBufferBuilder
-	MakeRenderTarget() RenderTarget
+	MakeRenderTarget(width, height uint16) RenderTarget
 	MakeProcedureBuilder() ProcedureBuilder
-	MakeOperation(procedure Procedure) Opteration
+	MakeOperation(procedure Procedure) Operation
 	// Only allows simple shaders for small effects, because the input data is not modifiable
 	// Expects a function that with the following parameters:
 	// in original: sampler2d

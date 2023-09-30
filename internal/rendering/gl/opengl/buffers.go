@@ -12,7 +12,7 @@ import (
 	SpriteBuffer
 */
 
-func (r *Renderer) MakeSpriteBufferBuilder() render.SpriteBufferBuilder {
+func (r *renderer) MakeSpriteBufferBuilder() render.SpriteBufferBuilder {
 	return &spriteBufferBuilder{make([]*vecsprite.VecSprite, 0)}
 }
 
@@ -21,7 +21,7 @@ type spriteBufferBuilder struct {
 }
 
 type spriteBuffer struct {
-	render.SpriteBufferIdentifyer
+	render.SpriteBufferIdentifier
 	vertsID       uint32
 	indsID        uint32
 	vertPositions []uint32
@@ -63,7 +63,7 @@ func (s *spriteBufferBuilder) Finish() render.SpriteBuffer {
 	DataBuffer
 */
 
-func (r *Renderer) MakeDataBuffer(static bool) render.DataBuffer {
+func (r *renderer) MakeDataBuffer(static bool) render.DataBuffer {
 	var id uint32
 	gl.GenBuffers(1, &id)
 	return &dataBuffer{
@@ -76,7 +76,8 @@ type dataBuffer struct {
 	id     uint32
 	static bool
 	// layout is part of VAO in opengl, so the glCalls should happen in the operation
-	layout []render.InputType
+	layout     []render.InputType
+	layoutSize uint16
 }
 
 func (d *dataBuffer) usage() uint32 {
@@ -118,4 +119,8 @@ func (d *dataBuffer) SetData64(data []uint64) {
 
 func (d *dataBuffer) SetLayout(layout ...render.InputType) {
 	d.layout = layout
+	d.layoutSize = 0
+	for _, elem := range d.layout {
+		d.layoutSize += uint16(render.SizeOf(elem))
+	}
 }
