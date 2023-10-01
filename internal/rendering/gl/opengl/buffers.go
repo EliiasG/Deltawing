@@ -41,6 +41,8 @@ func (s *spriteBufferBuilder) AddSprite(sprite *vecsprite.VecSprite) uint32 {
 }
 
 func (s *spriteBufferBuilder) Finish() render.SpriteBuffer {
+	// make sure to not modify some VAO
+	gl.BindVertexArray(0)
 	sb := new(spriteBuffer)
 	var verts, inds []uint32
 	// turn sprites into arrays for verts and inds

@@ -16,11 +16,12 @@ func (r *renderer) MakeProcedureBuilder() render.ProcedureBuilder {
 
 type procedure struct {
 	render.ProcedureIdentifier
-	id uint32
+	progID             uint32
+	screenSizeLocation int32
 }
 
 func (p *procedure) Free() {
-	gl.DeleteProgram(p.id)
+	gl.DeleteProgram(p.progID)
 }
 
 // will be called by the ShaderBuilder
@@ -31,7 +32,7 @@ func compileProgram(vertSource string) (render.Procedure, error) {
 		return nil, err
 	}
 	// fragment shader
-	// FIXME fragment shader is not generated, so maybe only compile once
+	// FIXME fragment shader is not generated at runtime, so maybe only compile once
 	frag, err := compileShader(gl.FRAGMENT_SHADER, shader.FragmentSource)
 	if err != nil {
 		return nil, err
@@ -44,7 +45,9 @@ func compileProgram(vertSource string) (render.Procedure, error) {
 	// delete shaders (program is not deleted)
 	gl.DeleteShader(vert)
 	gl.DeleteShader(frag)
-	return &procedure{id: prog}, nil
+	// get size uniform location
+	sizeLoc := gl.GetUniformLocation(prog, gl.Str("screenSize"))
+	return &procedure{progID: prog, screenSizeLocation: sizeLoc}, nil
 }
 
 func createProgram(vertShader, fragShader uint32) (uint32, error) {

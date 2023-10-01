@@ -11,6 +11,7 @@ layout(location = 1) in ivec4 aColor;
 out vec4 vertexColor;
 out uint layer;
 
+uniform vec2 screenSize;
 // uniforms from channels
 <uniforms>
 
@@ -26,7 +27,7 @@ void main() {
 
     gl_Position = vec4(
         // position
-        (<xAxis> * aPos.x + <yAxis> * aPos.y + <pos>),
+        (<xAxis> * aPos.x + <yAxis> * aPos.y + vec2(<pos>)) / screenSize * vec2(2, -2) + vec2(-1, 1),
         0, 1.0
     );
 

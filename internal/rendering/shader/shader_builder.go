@@ -26,8 +26,12 @@ type interChannel struct {
 	expr string
 }
 
-func GetChannelName(channel r.Channel) string {
+func ChannelName(channel r.Channel) string {
 	return getVarName(channel.(glslChannel).id)
+}
+
+func ChannelType(channel r.Channel) r.ShaderType {
+	return channel.(glslChannel).varType
 }
 
 func getVarName(id uint16) string {
@@ -147,7 +151,7 @@ func setOutputChannel(channel r.Channel, typ r.ShaderType) (uint16, error) {
 }
 
 func (s *shaderBuilder) SetPositionChannel(channel r.Channel) (e error) {
-	s.posID, e = setOutputChannel(channel, r.Type(r.ShaderFloat, 2))
+	s.posID, e = setOutputChannel(channel, r.Type(r.ShaderInt, 2))
 	return
 }
 
@@ -183,7 +187,7 @@ func getGLSLTypeName(typ r.ShaderType) string {
 func (s *shaderBuilder) makeAtrribSection() string {
 	var sb strings.Builder
 	for i, channel := range s.attribChans {
-		sb.WriteString(fmt.Sprintf("layout(location=%v) %v %v;\n", i+int(s.startPos), getGLSLTypeName(channel.varType), GetChannelName(channel)))
+		sb.WriteString(fmt.Sprintf("layout(location=%v) %v %v;\n", i+int(s.startPos), getGLSLTypeName(channel.varType), ChannelName(channel)))
 	}
 	return sb.String()
 }
@@ -191,7 +195,7 @@ func (s *shaderBuilder) makeAtrribSection() string {
 func (s *shaderBuilder) makeUniformSection() string {
 	var sb strings.Builder
 	for _, channel := range s.operChans {
-		sb.WriteString(fmt.Sprintf("uniform %v %v;\n", getGLSLTypeName(channel.varType), GetChannelName(channel)))
+		sb.WriteString(fmt.Sprintf("uniform %v %v;\n", getGLSLTypeName(channel.varType), ChannelName(channel)))
 	}
 	return sb.String()
 }
@@ -222,7 +226,7 @@ func (s *shaderBuilder) makeVariablesSection() string {
 	var sb strings.Builder
 	for _, variable := range s.interChans {
 		// '<type> <name>'
-		sb.WriteString(fmt.Sprintf("%v %v", getGLSLTypeName(variable.varType), GetChannelName(variable)))
+		sb.WriteString(fmt.Sprintf("%v %v", getGLSLTypeName(variable.varType), ChannelName(variable)))
 		if variable.expr != "" {
 			// '= <expression>'
 			sb.WriteString("= " + variable.expr)

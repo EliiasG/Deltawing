@@ -54,11 +54,19 @@ func (t *renderTarget) Free() {
 }
 
 func (t *renderTarget) Width() uint16 {
-	return t.width
+	if t.framebufferID != 0 {
+		return t.width
+	} else {
+		panic("do not get height of primary rendertarget")
+	}
 }
 
 func (t *renderTarget) Height() uint16 {
-	return t.height
+	if t.framebufferID != 0 {
+		return t.height
+	} else {
+		panic("do not get height of primary rendertarget")
+	}
 }
 
 func (t *renderTarget) Clear(r uint8, g uint8, b uint8) {
@@ -68,6 +76,9 @@ func (t *renderTarget) Clear(r uint8, g uint8, b uint8) {
 }
 
 func (t *renderTarget) Resize(width, height uint16) {
+	if t.framebufferID == 0 {
+		panic("do not resize primary rendertarget")
+	}
 	t.width = width
 	t.height = height
 	// bind texture
