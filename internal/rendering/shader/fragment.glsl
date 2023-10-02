@@ -4,7 +4,7 @@ precision mediump float;
 out vec4 FragColor;
 
 in vec4 vertexColor;
-in uint layer;
+in flat uint layer;
 
 void main() {
     FragColor = vertexColor;

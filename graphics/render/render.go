@@ -185,7 +185,7 @@ type ProcedureBuilder interface {
 	// Sets the channel to use for the position, must be 2 ints - final position is (0, 0) in top left and (width-1, height-1) in bottom right
 	SetPositionChannel(channel Channel) error
 
-	// Set the channel to use for the layer, must be an int
+	// Set the channel to use for the layer, must be an uint
 	SetLayerChannel(channel Channel) error
 
 	// Use following methods for scaling and rotation, must be 2 floats per channel

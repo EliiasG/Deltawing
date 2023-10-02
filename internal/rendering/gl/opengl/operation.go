@@ -40,6 +40,7 @@ func (o *operation) AddInstanceAttribute(buffer render.DataBuffer, offset uint32
 	// setup
 	typ := buf.layout[index]
 	gl.VertexAttribPointerWithOffset(o.idx, int32(render.SizeOf(typ)), glType(typ.Type), false, int32(buf.layoutSize), off)
+	gl.VertexAttribDivisor(o.idx, 1)
 	o.idx++
 }
 
@@ -69,7 +70,7 @@ func glType(typ render.ChannelInputType) uint32 {
 }
 
 func (o *operation) SetChannelValue(channel render.Channel, data any) {
-	uniform := gl.GetUniformLocation(o.proc.progID, gl.Str(shader.ChannelName(channel)))
+	uniform := gl.GetUniformLocation(o.proc.progID, gl.Str(shader.ChannelName(channel)+"\x00"))
 	if !g.AssertType(shader.ChannelType(channel), data) {
 		// Maybe bad?
 		panic("Invalid type")
@@ -86,7 +87,7 @@ func (o *operation) DrawTo(target render.RenderTarget) {
 func (o *operation) bind(target render.RenderTarget) {
 	gl.UseProgram(o.proc.progID)
 	gl.BindVertexArray(o.vaoID)
-	gl.BindFramebuffer(gl.FRAMEBUFFER, target.(*renderTarget).framebufferID)
+	gl.BindFramebuffer(gl.FRAMEBUFFER, getRenderTarget(target).framebufferID)
 }
 
 func (o *operation) initShader(width, height uint16) {

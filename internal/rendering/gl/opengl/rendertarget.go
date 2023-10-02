@@ -12,6 +12,11 @@ type renderTarget struct {
 	width, height uint16
 }
 
+type primaryRenderTarget struct {
+	*renderTarget
+	widthFunc, heightFunc func() uint16
+}
+
 func (r *renderer) MakeRenderTarget(width, height uint16) render.RenderTarget {
 	// make buffer
 	var framebuffer uint32
@@ -54,19 +59,19 @@ func (t *renderTarget) Free() {
 }
 
 func (t *renderTarget) Width() uint16 {
-	if t.framebufferID != 0 {
-		return t.width
-	} else {
-		panic("do not get height of primary rendertarget")
-	}
+	return t.width
+}
+
+func (t *primaryRenderTarget) Width() uint16 {
+	return t.widthFunc()
 }
 
 func (t *renderTarget) Height() uint16 {
-	if t.framebufferID != 0 {
-		return t.height
-	} else {
-		panic("do not get height of primary rendertarget")
-	}
+	return t.height
+}
+
+func (t *primaryRenderTarget) Height() uint16 {
+	return t.heightFunc()
 }
 
 func (t *renderTarget) Clear(r uint8, g uint8, b uint8) {
@@ -91,10 +96,20 @@ func (t *renderTarget) Resize(width, height uint16) {
 	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32, int32(width), int32(height), 0, gl.DEPTH, gl.UNSIGNED_INT, nil)
 }
 
+func getRenderTarget(target render.RenderTarget) *renderTarget {
+	switch t := target.(type) {
+	case *renderTarget:
+		return t
+	case *primaryRenderTarget:
+		return t.renderTarget
+	}
+	return nil
+}
+
 func (t *renderTarget) BlitTo(target render.RenderTarget, x, y uint16) {
 	gl.BindFramebuffer(gl.READ_FRAMEBUFFER, t.framebufferID)
 	// funny convertion, but should only be called with renderTarget from same renderer
-	gl.BindFramebuffer(gl.DRAW_FRAMEBUFFER, target.(*renderTarget).framebufferID)
+	gl.BindFramebuffer(gl.DRAW_FRAMEBUFFER, getRenderTarget(target).framebufferID)
 	gl.BlitFramebuffer(0, 0, int32(t.width), int32(t.height), int32(x), int32(y), int32(x+t.width), int32(y+t.height), gl.COLOR_BUFFER_BIT, gl.LINEAR)
 }
 

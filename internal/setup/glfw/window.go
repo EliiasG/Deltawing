@@ -31,3 +31,7 @@ func (w *window) UpdateView() {
 	w.win.SwapBuffers()
 	glfw.PollEvents()
 }
+
+func (w *window) ShouldClose() bool {
+	return w.win.ShouldClose()
+}

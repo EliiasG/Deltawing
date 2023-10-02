@@ -29,11 +29,7 @@ func (p *program) Terminate() {
 
 func NewProgram(width, height uint16, name string) desktop.Program {
 	runtime.LockOSThread()
-	e := gl.Init()
-	if e != nil {
-		panic("OpenGL failed to init with following error: " + e.Error())
-	}
-	e = glfw.Init()
+	e := glfw.Init()
 	if e != nil {
 		panic("GLFW failed to init with following error: " + e.Error())
 	}
@@ -48,5 +44,19 @@ func NewProgram(width, height uint16, name string) desktop.Program {
 	if e != nil {
 		panic("Window failed to init with following error: " + e.Error())
 	}
-	return &program{&window{win}, opengl.NewRenderer()}
+	win.MakeContextCurrent()
+	e = gl.Init()
+	if e != nil {
+		panic("OpenGL failed to init with following error: " + e.Error())
+	}
+	return &program{&window{win}, opengl.NewRenderer(
+		func() uint16 {
+			width, _ := win.GetSize()
+			return uint16(width)
+		},
+		func() uint16 {
+			_, height := win.GetSize()
+			return uint16(height)
+		},
+	)}
 }

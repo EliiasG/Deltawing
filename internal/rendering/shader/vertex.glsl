@@ -4,12 +4,12 @@
 precision mediump float;
 layout(location = 0) in vec2 aPos;
 // color.w/a/q is layer
-layout(location = 1) in ivec4 aColor;
+layout(location = 1) in uvec4 aColor;
 // layouts from channels
 <attributes>
 
 out vec4 vertexColor;
-out uint layer;
+out flat uint layer;
 
 uniform vec2 screenSize;
 // uniforms from channels
@@ -32,6 +32,6 @@ void main() {
     );
 
     // TODO maybe add modulate like godot
-    vertexColor = vec4(aColor.rgb, 1);
-    layer = <layer>*256 + aColor.a;
+    vertexColor = vec4(vec3(aColor.rgb) / 256.0, 1);
+    layer = <layer>*uint(256) + aColor.a;
 }

@@ -15,6 +15,7 @@ type Window interface {
 	SetMaximized(maximized bool)
 	SetFullScreen(fullscreen bool)
 	SetSizeShanged(handler func(uint16, uint16))
+	ShouldClose() bool
 	WindowSize() (uint16, uint16)
 	UpdateView()
 }

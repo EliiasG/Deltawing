@@ -46,7 +46,7 @@ func compileProgram(vertSource string) (render.Procedure, error) {
 	gl.DeleteShader(vert)
 	gl.DeleteShader(frag)
 	// get size uniform location
-	sizeLoc := gl.GetUniformLocation(prog, gl.Str("screenSize"))
+	sizeLoc := gl.GetUniformLocation(prog, gl.Str("screenSize\x00"))
 	return &procedure{progID: prog, screenSizeLocation: sizeLoc}, nil
 }
 
@@ -80,10 +80,10 @@ func compileShader(typ uint32, source string) (uint32, error) {
 	cSource, free := gl.Strs(source)
 	gl.ShaderSource(shader, 1, cSource, nil)
 	free()
+	gl.CompileShader(shader)
 	// check for error
 	err := getShaderError(shader)
 	if err != "" {
-		gl.DeleteShader(shader)
 		return 0, errors.New(fmt.Sprintf("Failed to compile shader:\n%v\nWith error:\n%v", source, err))
 	}
 	return shader, nil
@@ -97,7 +97,6 @@ func getShaderError(shader uint32) string {
 		// get log length
 		var logLength int32
 		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
 		// get log
 		log := strings.Repeat("\x00", int(logLength+1))
 		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))

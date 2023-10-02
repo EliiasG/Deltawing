@@ -22,16 +22,26 @@ type funcCall struct {
 }
 
 type interChannel struct {
-	glslChannel
+	*glslChannel
 	expr string
 }
 
+func getGLChannel(channel r.Channel) *glslChannel {
+	switch c := channel.(type) {
+	case *glslChannel:
+		return c
+	case *interChannel:
+		return c.glslChannel
+	}
+	return nil
+}
+
 func ChannelName(channel r.Channel) string {
-	return getVarName(channel.(glslChannel).id)
+	return getVarName(getGLChannel(channel).id)
 }
 
 func ChannelType(channel r.Channel) r.ShaderType {
-	return channel.(glslChannel).varType
+	return getGLChannel(channel).varType
 }
 
 func getVarName(id uint16) string {
@@ -45,9 +55,9 @@ type shaderBuilder struct {
 	baseSource  string
 	done        func(string) (r.Procedure, error)
 	chanID      uint16
-	interChans  []interChannel
-	attribChans []glslChannel
-	operChans   []glslChannel
+	interChans  []*interChannel
+	attribChans []*glslChannel
+	operChans   []*glslChannel
 	calls       []funcCall
 	// start position of layout
 	startPos uint8
@@ -77,16 +87,16 @@ func NewShaderBuilder(baseSource string, layoutStartPos uint8, done func(string)
 		done:       done,
 		// start index of channels, 0 is used unset channels
 		chanID:      1,
-		interChans:  make([]interChannel, 0),
-		attribChans: make([]glslChannel, 0),
-		operChans:   make([]glslChannel, 0),
+		interChans:  make([]*interChannel, 0),
+		attribChans: make([]*glslChannel, 0),
+		operChans:   make([]*glslChannel, 0),
 		calls:       make([]funcCall, 0),
 		startPos:    layoutStartPos,
 	}
 }
 
-func (s *shaderBuilder) makeChannel(varType r.ShaderType) glslChannel {
-	channel := glslChannel{
+func (s *shaderBuilder) makeChannel(varType r.ShaderType) *glslChannel {
+	channel := &glslChannel{
 		id:      s.chanID,
 		varType: varType,
 	}
@@ -96,7 +106,7 @@ func (s *shaderBuilder) makeChannel(varType r.ShaderType) glslChannel {
 
 func (s *shaderBuilder) AddIntermediateChannel(shaderType r.ShaderType, expression string) r.Channel {
 	channel := s.makeChannel(shaderType)
-	s.interChans = append(s.interChans, interChannel{
+	s.interChans = append(s.interChans, &interChannel{
 		channel,
 		expression,
 	})
@@ -127,7 +137,7 @@ func (s *shaderBuilder) CallFunction(function *r.Function, channels ...r.Channel
 
 	// set params of call, and check for wrong parameters
 	for i, channel := range channels {
-		glChan := channel.(glslChannel)
+		glChan := getGLChannel(channel)
 		param := function.Parameters[i]
 		if glChan.varType != param {
 			typ := glChan.varType
@@ -143,7 +153,7 @@ func (s *shaderBuilder) CallFunction(function *r.Function, channels ...r.Channel
 
 // hacky helper method for the output setters
 func setOutputChannel(channel r.Channel, typ r.ShaderType) (uint16, error) {
-	glChan := channel.(glslChannel)
+	glChan := getGLChannel(channel)
 	if glChan.varType != typ {
 		return 0, errors.New("Invalid output type")
 	}
@@ -156,7 +166,7 @@ func (s *shaderBuilder) SetPositionChannel(channel r.Channel) (e error) {
 }
 
 func (s *shaderBuilder) SetLayerChannel(channel r.Channel) (e error) {
-	s.layerID, e = setOutputChannel(channel, r.Type(r.ShaderInt, 1))
+	s.layerID, e = setOutputChannel(channel, r.Type(r.ShaderUnsignedInt, 1))
 	return
 }
 
