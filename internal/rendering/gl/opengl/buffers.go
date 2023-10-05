@@ -56,7 +56,7 @@ func (s *spriteBufferBuilder) Finish() render.SpriteBuffer {
 
 	// index buffer
 	gl.GenBuffers(1, &sb.indsID)
-	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, sb.vertsID)
+	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, sb.indsID)
 	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(inds)*4, gl.Ptr(inds), gl.STATIC_DRAW)
 	return sb
 }

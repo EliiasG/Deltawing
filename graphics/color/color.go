@@ -14,12 +14,12 @@ func FromARGB(a, r, g, b uint8) Color {
 	return Color{r, g, b, a}
 }
 
-func (c Color) ToRGBA() [4]byte {
-	return [4]byte{c.R, c.G, c.B, c.A}
+func (c Color) ToRGBA() [4]uint8 {
+	return [4]uint8{c.R, c.G, c.B, c.A}
 }
 
-func (c Color) ToARGB() [4]byte {
-	return [4]byte{c.A, c.R, c.G, c.B}
+func (c Color) ToARGB() [4]uint8 {
+	return [4]uint8{c.A, c.R, c.G, c.B}
 }
 
 func White() Color {

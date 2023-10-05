@@ -49,6 +49,11 @@ func NewProgram(width, height uint16, name string) desktop.Program {
 	if e != nil {
 		panic("OpenGL failed to init with following error: " + e.Error())
 	}
+	gl.Enable(gl.DEPTH_TEST)
+	gl.Enable(gl.MULTISAMPLE)
+	gl.Disable(gl.CULL_FACE)
+	gl.DepthFunc(gl.GREATER)
+	gl.ClearDepth(0)
 	return &program{&window{win}, opengl.NewRenderer(
 		func() uint16 {
 			width, _ := win.GetSize()

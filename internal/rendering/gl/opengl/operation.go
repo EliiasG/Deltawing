@@ -1,6 +1,8 @@
 package opengl
 
 import (
+	"fmt"
+
 	"github.com/eliiasg/deltawing/graphics/render"
 	g "github.com/eliiasg/deltawing/internal/rendering/gl"
 	"github.com/eliiasg/deltawing/internal/rendering/shader"
@@ -8,19 +10,20 @@ import (
 )
 
 type operation struct {
-	vaoID         uint32
-	idx           uint32
-	amount        uint32
-	proc          *procedure
-	uniformParams map[int32]any
-	idxStart      int32
-	idxAmt        int32
+	vaoID           uint32
+	attribIdxOffset uint32
+	attribIdxStart  uint32
+	amount          uint32
+	proc            *procedure
+	uniformParams   map[int32]any
+	spriteIdxStart  int32
+	spriteIdxAmt    int32
 }
 
 func (r *renderer) MakeOperation(proc render.Procedure) render.Operation {
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
-	return &operation{vao, shader.VertexBaseInputAmt, 0, proc.(*procedure), make(map[int32]any), 0, 0}
+	return &operation{vao, 0, shader.VertexBaseInputAmt, 0, proc.(*procedure), make(map[int32]any), 0, 0}
 }
 
 func (o *operation) Free() {
@@ -39,9 +42,18 @@ func (o *operation) AddInstanceAttribute(buffer render.DataBuffer, offset uint32
 	gl.BindBuffer(gl.ARRAY_BUFFER, buf.id)
 	// setup
 	typ := buf.layout[index]
-	gl.VertexAttribPointerWithOffset(o.idx, int32(render.SizeOf(typ)), glType(typ.Type), false, int32(buf.layoutSize), off)
-	gl.VertexAttribDivisor(o.idx, 1)
-	o.idx++
+	// layout index
+	idx := o.attribIdxOffset + o.attribIdxStart
+	gl.EnableVertexAttribArray(idx)
+	// OpenGL is more annoying than i thought, amazing!
+	// IPointer must be used if its an int to int for some reason, thouht that was what the normalized param was for
+	if shader.IsInt(o.proc.attribTypes[int(o.attribIdxOffset)].Type) {
+		gl.VertexAttribIPointerWithOffset(idx, int32(typ.Amount), glType(typ.Type), int32(buf.layoutSize), off)
+	} else {
+		gl.VertexAttribPointerWithOffset(idx, int32(typ.Amount), glType(typ.Type), false, int32(buf.layoutSize), off)
+	}
+	gl.VertexAttribDivisor(idx, 1)
+	o.attribIdxOffset++
 }
 
 // very exiting function
@@ -81,7 +93,7 @@ func (o *operation) SetChannelValue(channel render.Channel, data any) {
 func (o *operation) DrawTo(target render.RenderTarget) {
 	o.bind(target)
 	o.initShader(target.Width(), target.Height())
-	gl.DrawElementsInstancedBaseVertex(gl.TRIANGLES, o.idxAmt, gl.UNSIGNED_INT, nil, int32(o.amount), o.idxStart)
+	gl.DrawElementsInstancedBaseVertex(gl.TRIANGLES, o.spriteIdxAmt, gl.UNSIGNED_INT, nil, int32(o.amount), o.spriteIdxStart)
 }
 
 func (o *operation) bind(target render.RenderTarget) {
@@ -94,7 +106,7 @@ func (o *operation) initShader(width, height uint16) {
 	for location, value := range o.uniformParams {
 		setUniform(location, value)
 	}
-	setUniform(o.proc.screenSizeLocation, [2]float32{float32(width), float32(height)})
+	setUniform(o.proc.screenSizeLocation, [2]int32{int32(width), int32(height)})
 }
 
 // very smart to have a function for every type, i just love OpenGL
@@ -141,8 +153,9 @@ func setUniform(location int32, data any) {
 func (o *operation) SetSprite(buffer render.SpriteBuffer, id uint32) {
 	buf := buffer.(*spriteBuffer)
 	// tell operation what sprite to draw
-	o.idxStart = int32(buf.idxPositions[id])
-	o.idxAmt = int32(buf.idxPositions[id+1]) - o.idxStart
+	o.spriteIdxStart = int32(buf.idxPositions[id])
+	o.spriteIdxAmt = int32(buf.idxPositions[id+1]) - o.spriteIdxStart
+	fmt.Println(buf.idxPositions, o.spriteIdxAmt, id)
 	// setup vao
 	gl.BindVertexArray(o.vaoID)
 	gl.BindBuffer(gl.ARRAY_BUFFER, buf.vertsID)
@@ -153,7 +166,7 @@ func (o *operation) SetSprite(buffer render.SpriteBuffer, id uint32) {
 	gl.VertexAttribPointerWithOffset(0, 2, gl.FLOAT, false, 12, 0)
 	// color / layer
 	gl.EnableVertexAttribArray(1)
-	gl.VertexAttribPointerWithOffset(1, 4, gl.UNSIGNED_BYTE, false, 12, 8)
+	gl.VertexAttribIPointerWithOffset(1, 4, gl.UNSIGNED_BYTE, 12, 8)
 }
 
 func (o *operation) SetAmount(amount uint32) {

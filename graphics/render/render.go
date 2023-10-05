@@ -30,7 +30,7 @@ const (
 	ShaderInt ChannelShaderType = iota
 	ShaderUnsignedInt
 	ShaderFloat
-	ShaderDouble
+	// Double missing since it is not avalibe in GLSL ES 300
 )
 
 // Describes a channel
@@ -233,7 +233,7 @@ type Renderer interface {
 	// if static is true buffer is optimized to be only written to once
 	MakeDataBuffer(static bool) DataBuffer
 	MakeSpriteBufferBuilder() SpriteBufferBuilder
-	MakeRenderTarget(width, height uint16) RenderTarget
+	MakeRenderTarget(width, height uint16, multisample bool) RenderTarget
 	MakeProcedureBuilder() ProcedureBuilder
 	MakeOperation(procedure Procedure) Operation
 	// Only allows simple shaders for small effects, because the input data is not modifiable

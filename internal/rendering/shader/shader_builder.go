@@ -53,7 +53,8 @@ func getVarName(id uint16) string {
 // just collects the data, shader will be composed at end
 type shaderBuilder struct {
 	baseSource  string
-	done        func(string) (r.Procedure, error)
+	version     string
+	done        func(string, []r.ShaderType) (r.Procedure, error)
 	chanID      uint16
 	interChans  []*interChannel
 	attribChans []*glslChannel
@@ -71,6 +72,7 @@ type shaderBuilder struct {
 /*
 The baseSource is a shader that will be added parts to.
 The following keywords will be replaced:
+'<version>' version and possiblr precision calls, should only be used once
 '<attributes>' instance data, should only be used once
 '<uniforms>' uniforms, should only be used once
 '<functions>' function declarations, should only be used once
@@ -81,7 +83,7 @@ The following keywords will be replaced:
 '<xAxis>' output xAxis variable, this should not be modified
 '<yAxis>' output xAxis variable, this should not be modified
 */
-func NewShaderBuilder(baseSource string, layoutStartPos uint8, done func(string) (r.Procedure, error)) r.ProcedureBuilder {
+func NewShaderBuilder(baseSource string, layoutStartPos uint8, version string, done func(string, []r.ShaderType) (r.Procedure, error)) r.ProcedureBuilder {
 	return &shaderBuilder{
 		baseSource: baseSource,
 		done:       done,
@@ -92,6 +94,7 @@ func NewShaderBuilder(baseSource string, layoutStartPos uint8, done func(string)
 		operChans:   make([]*glslChannel, 0),
 		calls:       make([]funcCall, 0),
 		startPos:    layoutStartPos,
+		version:     version,
 	}
 }
 
@@ -161,7 +164,7 @@ func setOutputChannel(channel r.Channel, typ r.ShaderType) (uint16, error) {
 }
 
 func (s *shaderBuilder) SetPositionChannel(channel r.Channel) (e error) {
-	s.posID, e = setOutputChannel(channel, r.Type(r.ShaderInt, 2))
+	s.posID, e = setOutputChannel(channel, r.Type(r.ShaderFloat, 2))
 	return
 }
 
@@ -181,7 +184,6 @@ func (s *shaderBuilder) SetYAxisChannel(channel r.Channel) (e error) {
 }
 
 var typeMap = map[r.ChannelShaderType][2]string{
-	r.ShaderDouble:      {"double", "dvec"},
 	r.ShaderFloat:       {"float", "vec"},
 	r.ShaderInt:         {"int", "ivec"},
 	r.ShaderUnsignedInt: {"uint", "uvec"},
@@ -197,7 +199,7 @@ func getGLSLTypeName(typ r.ShaderType) string {
 func (s *shaderBuilder) makeAtrribSection() string {
 	var sb strings.Builder
 	for i, channel := range s.attribChans {
-		sb.WriteString(fmt.Sprintf("layout(location=%v) %v %v;\n", i+int(s.startPos), getGLSLTypeName(channel.varType), ChannelName(channel)))
+		sb.WriteString(fmt.Sprintf("layout(location=%v) in %v %v;\n", i+int(s.startPos), getGLSLTypeName(channel.varType), ChannelName(channel)))
 	}
 	return sb.String()
 }
@@ -252,8 +254,12 @@ func (s *shaderBuilder) makeCallsSection() string {
 	for _, call := range s.calls {
 		sb.WriteString(call.fun.Name + "(")
 		// parameters
-		for _, param := range call.params {
-			sb.WriteString(getVarName(param) + ", ")
+		for i, param := range call.params {
+			r := getVarName(param)
+			if i < len(call.params)-1 {
+				r += ", "
+			}
+			sb.WriteString(r)
 		}
 		sb.WriteString(");\n")
 	}
@@ -264,6 +270,7 @@ func (s *shaderBuilder) makeCallsSection() string {
 // it expects a shader because other edits might be made to the baseSource before this
 func (s *shaderBuilder) composeSections(shader string) (string, error) {
 	sections := [][2]string{
+		{"<version>", s.version},
 		{"<attributes>", s.makeAtrribSection()},
 		{"<uniforms>", s.makeUniformSection()},
 		{"<functions>", s.makeDeclarationSection()},
@@ -326,10 +333,18 @@ func (s *shaderBuilder) composeShader() (string, error) {
 	return shader, nil
 }
 
+func (s *shaderBuilder) getAttribTypes() []r.ShaderType {
+	res := make([]r.ShaderType, 0, len(s.attribChans)+2)
+	for _, channel := range s.attribChans {
+		res = append(res, channel.varType)
+	}
+	return res
+}
+
 func (s *shaderBuilder) Finish() (r.Procedure, error) {
 	shader, err := s.composeShader()
 	if err != nil {
 		return nil, err
 	}
-	return s.done(shader)
+	return s.done(shader, s.getAttribTypes())
 }

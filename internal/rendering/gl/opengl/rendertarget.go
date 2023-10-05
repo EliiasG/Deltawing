@@ -10,6 +10,7 @@ type renderTarget struct {
 	textureID     uint32
 	depthID       uint32
 	width, height uint16
+	multisample   bool
 }
 
 type primaryRenderTarget struct {
@@ -17,32 +18,24 @@ type primaryRenderTarget struct {
 	widthFunc, heightFunc func() uint16
 }
 
-func (r *renderer) MakeRenderTarget(width, height uint16) render.RenderTarget {
+func (r *renderer) MakeRenderTarget(width, height uint16, multisample bool) render.RenderTarget {
 	// make buffer
 	var framebuffer uint32
 	gl.GenFramebuffers(1, &framebuffer)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, framebuffer)
 	// add texture
 	texture := makeTextureBuffer(width, height)
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0)
 	// add depth
-	depth := makeDepthBuffer(width, height)
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depth, 0)
+	depth := makeTextureBuffer(width, height)
 	t := &renderTarget{
 		framebufferID: framebuffer,
 		textureID:     texture,
 		depthID:       depth,
+		multisample:   multisample,
 	}
 	// to init texture and depthbuffer
 	t.Resize(width, height)
 	return t
-}
-
-func makeDepthBuffer(width, height uint16) uint32 {
-	// make
-	var texture uint32
-	gl.GenTextures(1, &texture)
-	return texture
 }
 
 func makeTextureBuffer(width, height uint16) uint32 {
@@ -75,8 +68,8 @@ func (t *primaryRenderTarget) Height() uint16 {
 }
 
 func (t *renderTarget) Clear(r uint8, g uint8, b uint8) {
-	gl.ClearColor(float32(r)/256, float32(g)/256, float32(b)/256, 1.0)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, t.framebufferID)
+	gl.ClearColor(float32(r)/256, float32(g)/256, float32(b)/256, 1.0)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 }
 
@@ -86,14 +79,42 @@ func (t *renderTarget) Resize(width, height uint16) {
 	}
 	t.width = width
 	t.height = height
+	gl.BindFramebuffer(gl.FRAMEBUFFER, t.framebufferID)
+	if t.multisample {
+		t.resizeMultisample(width, height)
+	} else {
+		t.resizeNormal(width, height)
+	}
+}
+
+func (t *renderTarget) resizeNormal(width, height uint16) {
 	// bind texture
 	gl.BindTexture(gl.TEXTURE_2D, t.textureID)
 	// init texture
 	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, int32(width), int32(height), 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 	// bind depthbuffer
-	gl.BindTexture(gl.TEXTURE_2D, t.framebufferID)
+	gl.BindTexture(gl.TEXTURE_2D, t.depthID)
 	// init depthbuffer
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32, int32(width), int32(height), 0, gl.DEPTH, gl.UNSIGNED_INT, nil)
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32, int32(width), int32(height), 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, nil)
+	// add to framebuffer
+	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t.textureID, 0)
+	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, t.depthID, 0)
+}
+
+func (t *renderTarget) resizeMultisample(width, height uint16) {
+	// bind texture
+	gl.BindTexture(gl.TEXTURE_2D_MULTISAMPLE, t.textureID)
+	// init texture
+	gl.TexImage2DMultisample(gl.TEXTURE_2D_MULTISAMPLE, 4, gl.RGB, int32(width), int32(height), false)
+	// bind depthbuffer
+	gl.BindTexture(gl.TEXTURE_2D_MULTISAMPLE, t.depthID)
+	// init depthbuffer
+	gl.TexImage2DMultisample(gl.TEXTURE_2D_MULTISAMPLE, 4, gl.DEPTH_COMPONENT32, int32(width), int32(height), false)
+	// add to framebuffer
+	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D_MULTISAMPLE, t.textureID, 0)
+	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D_MULTISAMPLE, t.depthID, 0)
 }
 
 func getRenderTarget(target render.RenderTarget) *renderTarget {
@@ -107,10 +128,15 @@ func getRenderTarget(target render.RenderTarget) *renderTarget {
 }
 
 func (t *renderTarget) BlitTo(target render.RenderTarget, x, y uint16) {
+	tar := getRenderTarget(target)
+	if tar.multisample {
+		panic("Do not blit to multisampled target!")
+	}
 	gl.BindFramebuffer(gl.READ_FRAMEBUFFER, t.framebufferID)
-	// funny convertion, but should only be called with renderTarget from same renderer
-	gl.BindFramebuffer(gl.DRAW_FRAMEBUFFER, getRenderTarget(target).framebufferID)
-	gl.BlitFramebuffer(0, 0, int32(t.width), int32(t.height), int32(x), int32(y), int32(x+t.width), int32(y+t.height), gl.COLOR_BUFFER_BIT, gl.LINEAR)
+	gl.BindFramebuffer(gl.DRAW_FRAMEBUFFER, tar.framebufferID)
+	// using target, because it might be a primarytarget
+	y = target.Height() - t.Height() - y
+	gl.BlitFramebuffer(0, 0, int32(t.Width()), int32(t.Height()), int32(x), int32(y), int32(x+t.Width()), int32(y+t.Height()), gl.COLOR_BUFFER_BIT, gl.LINEAR)
 }
 
 func (t *renderTarget) DrawTo(target render.RenderTarget, x uint16, y uint16, width uint16, height uint16, pivotX uint16, pivotY uint16, rotation float32, shader render.FragmentShader) {

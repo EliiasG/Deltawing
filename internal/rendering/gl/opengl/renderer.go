@@ -15,5 +15,5 @@ func (r *renderer) PrimaryRenderTarget() render.RenderTarget {
 // should be called after gl and GLFW is initialized
 // assumes primary rendertarget is set up properly
 func NewRenderer(winWdith, winHeight func() uint16) render.Renderer {
-	return &renderer{&primaryRenderTarget{&renderTarget{0, 0, 0, 0, 0}, winWdith, winHeight}}
+	return &renderer{&primaryRenderTarget{&renderTarget{0, 0, 0, 0, 0, false}, winWdith, winHeight}}
 }

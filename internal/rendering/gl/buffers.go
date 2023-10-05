@@ -17,8 +17,8 @@ func CompileVecSpriteBuffer(sprites []*vecsprite.VecSprite) ([]uint32, []uint32,
 	verts := make([]uint32, 0, numVerts)
 	inds := make([]uint32, 0, numInds)
 	var vertPos, idxPos uint32
-	vertPositions := make([]uint32, len(sprites)+1)
-	idxPositions := make([]uint32, len(sprites)+1)
+	vertPositions := make([]uint32, 0, len(sprites)+1)
+	idxPositions := make([]uint32, 0, len(sprites)+1)
 
 	for _, sprite := range sprites {
 		addSprite(&verts, &inds, sprite)
@@ -26,7 +26,7 @@ func CompileVecSpriteBuffer(sprites []*vecsprite.VecSprite) ([]uint32, []uint32,
 		idxPositions = append(idxPositions, idxPos)
 		// incrementing after since positions start at 0
 		vertPos += uint32(len(sprite.Vertices))
-		idxPos += uint32(len(sprite.Vertices))
+		idxPos += uint32(len(sprite.Indices))
 	}
 
 	// appending at end because it should be possible to get the size of the last sprite

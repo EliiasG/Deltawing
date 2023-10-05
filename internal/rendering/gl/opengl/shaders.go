@@ -11,13 +11,14 @@ import (
 )
 
 func (r *renderer) MakeProcedureBuilder() render.ProcedureBuilder {
-	return shader.NewShaderBuilder(shader.VertexBaseSource, 2, compileProgram)
+	return shader.NewShaderBuilder(shader.VertexBaseSource, 2, "#version 330 core", compileProgram)
 }
 
 type procedure struct {
 	render.ProcedureIdentifier
 	progID             uint32
 	screenSizeLocation int32
+	attribTypes        []render.ShaderType
 }
 
 func (p *procedure) Free() {
@@ -25,7 +26,7 @@ func (p *procedure) Free() {
 }
 
 // will be called by the ShaderBuilder
-func compileProgram(vertSource string) (render.Procedure, error) {
+func compileProgram(vertSource string, attribTypes []render.ShaderType) (render.Procedure, error) {
 	// vertex shader
 	vert, err := compileShader(gl.VERTEX_SHADER, vertSource)
 	if err != nil {
@@ -47,7 +48,7 @@ func compileProgram(vertSource string) (render.Procedure, error) {
 	gl.DeleteShader(frag)
 	// get size uniform location
 	sizeLoc := gl.GetUniformLocation(prog, gl.Str("screenSize\x00"))
-	return &procedure{progID: prog, screenSizeLocation: sizeLoc}, nil
+	return &procedure{progID: prog, screenSizeLocation: sizeLoc, attribTypes: attribTypes}, nil
 }
 
 func createProgram(vertShader, fragShader uint32) (uint32, error) {
