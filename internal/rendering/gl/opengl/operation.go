@@ -6,7 +6,7 @@ import (
 	"github.com/eliiasg/deltawing/graphics/render"
 	g "github.com/eliiasg/deltawing/internal/rendering/gl"
 	"github.com/eliiasg/deltawing/internal/rendering/shader"
-	"github.com/go-gl/gl/v3.3-core/gl"
+	"github.com/eliiasg/glow/v3.3-core/gl"
 )
 
 type operation struct {
@@ -17,13 +17,14 @@ type operation struct {
 	proc            *procedure
 	uniformParams   map[int32]any
 	spriteIdxStart  int32
+	spriteVertStart int32
 	spriteIdxAmt    int32
 }
 
 func (r *renderer) MakeOperation(proc render.Procedure) render.Operation {
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
-	return &operation{vao, 0, shader.VertexBaseInputAmt, 0, proc.(*procedure), make(map[int32]any), 0, 0}
+	return &operation{vao, 0, shader.VertexBaseInputAmt, 0, proc.(*procedure), make(map[int32]any), 0, 0, 0}
 }
 
 func (o *operation) Free() {
@@ -93,7 +94,8 @@ func (o *operation) SetChannelValue(channel render.Channel, data any) {
 func (o *operation) DrawTo(target render.RenderTarget) {
 	o.bind(target)
 	o.initShader(target.Width(), target.Height())
-	gl.DrawElementsInstancedBaseVertex(gl.TRIANGLES, o.spriteIdxAmt, gl.UNSIGNED_INT, nil, int32(o.amount), o.spriteIdxStart)
+	// o.spriteIdxStart is *4, because the argument is in bytes, but type is 32bit
+	gl.DrawElementsInstancedBaseVertexWithOffset(gl.TRIANGLES, o.spriteIdxAmt, gl.UNSIGNED_INT, uintptr(o.spriteIdxStart*4), int32(o.amount), o.spriteVertStart)
 }
 
 func (o *operation) bind(target render.RenderTarget) {
@@ -155,6 +157,7 @@ func (o *operation) SetSprite(buffer render.SpriteBuffer, id uint32) {
 	// tell operation what sprite to draw
 	o.spriteIdxStart = int32(buf.idxPositions[id])
 	o.spriteIdxAmt = int32(buf.idxPositions[id+1]) - o.spriteIdxStart
+	o.spriteVertStart = int32(buf.vertPositions[id])
 	fmt.Println(buf.idxPositions, o.spriteIdxAmt, id)
 	// setup vao
 	gl.BindVertexArray(o.vaoID)

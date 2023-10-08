@@ -2,7 +2,7 @@ package opengl
 
 import (
 	"github.com/eliiasg/deltawing/graphics/render"
-	"github.com/go-gl/gl/v3.3-core/gl"
+	"github.com/eliiasg/glow/v3.3-core/gl"
 )
 
 type renderTarget struct {
@@ -127,7 +127,7 @@ func getRenderTarget(target render.RenderTarget) *renderTarget {
 	return nil
 }
 
-func (t *renderTarget) BlitTo(target render.RenderTarget, x, y uint16) {
+func (t *renderTarget) BlitTo(target render.RenderTarget, x, y int32) {
 	tar := getRenderTarget(target)
 	if tar.multisample {
 		panic("Do not blit to multisampled target!")
@@ -135,10 +135,10 @@ func (t *renderTarget) BlitTo(target render.RenderTarget, x, y uint16) {
 	gl.BindFramebuffer(gl.READ_FRAMEBUFFER, t.framebufferID)
 	gl.BindFramebuffer(gl.DRAW_FRAMEBUFFER, tar.framebufferID)
 	// using target, because it might be a primarytarget
-	y = target.Height() - t.Height() - y
-	gl.BlitFramebuffer(0, 0, int32(t.Width()), int32(t.Height()), int32(x), int32(y), int32(x+t.Width()), int32(y+t.Height()), gl.COLOR_BUFFER_BIT, gl.LINEAR)
+	y = int32(target.Height()) - int32(t.Height()) - y
+	gl.BlitFramebuffer(0, 0, int32(t.Width()), int32(t.Height()), int32(x), int32(y), x+int32(t.Width()), y+int32(t.Height()), gl.COLOR_BUFFER_BIT, gl.LINEAR)
 }
 
-func (t *renderTarget) DrawTo(target render.RenderTarget, x uint16, y uint16, width uint16, height uint16, pivotX uint16, pivotY uint16, rotation float32, shader render.FragmentShader) {
+func (t *renderTarget) DrawTo(target render.RenderTarget, x int32, y int32, width uint16, height uint16, pivotX uint16, pivotY uint16, rotation float32, shader render.FragmentShader) {
 	panic("not implemented") // TODO: Implement
 }

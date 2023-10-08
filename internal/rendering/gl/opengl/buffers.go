@@ -3,7 +3,7 @@ package opengl
 import (
 	"github.com/eliiasg/deltawing/graphics/render"
 	"github.com/eliiasg/deltawing/graphics/vecsprite"
-	"github.com/go-gl/gl/v3.3-core/gl"
+	"github.com/eliiasg/glow/v3.3-core/gl"
 
 	g "github.com/eliiasg/deltawing/internal/rendering/gl"
 )

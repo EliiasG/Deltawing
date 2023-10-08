@@ -136,9 +136,9 @@ type RenderTarget interface {
 	Clear(r, g, b uint8)
 	Resize(width, height uint16)
 	// Draw on other RenderTarget using bliting
-	BlitTo(target RenderTarget, x, y uint16)
+	BlitTo(target RenderTarget, x, y int32)
 	// Draw on other RenderTarget with given shader,position, size, rotation and pivot, pivot is realative to given size
-	DrawTo(target RenderTarget, x, y, width, height, pivotX, pivotY uint16, rotation float32, shader FragmentShader)
+	DrawTo(target RenderTarget, x, y int32, width, height, pivotX, pivotY uint16, rotation float32, shader FragmentShader)
 }
 
 // Describes how to transform a sprite from the given data

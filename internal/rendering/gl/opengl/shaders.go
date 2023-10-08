@@ -7,7 +7,7 @@ import (
 
 	"github.com/eliiasg/deltawing/graphics/render"
 	"github.com/eliiasg/deltawing/internal/rendering/shader"
-	"github.com/go-gl/gl/v3.3-core/gl"
+	"github.com/eliiasg/glow/v3.3-core/gl"
 )
 
 func (r *renderer) MakeProcedureBuilder() render.ProcedureBuilder {
