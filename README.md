@@ -1,2 +1,3 @@
+![Deltawing](logo.svg) 
 # Deltawing
-A lite game engine based on vector graphics.
+A light game framework based on vector graphics
