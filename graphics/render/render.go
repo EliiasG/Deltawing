@@ -138,7 +138,8 @@ type RenderTarget interface {
 	// Draw on other RenderTarget using bliting
 	BlitTo(target RenderTarget, x, y int32)
 	// Draw on other RenderTarget with given shader,position, size, rotation and pivot, pivot is realative to given size
-	DrawTo(target RenderTarget, x, y int32, width, height, pivotX, pivotY uint16, rotation float32, shader FragmentShader)
+	// Disabled for now, i'll need a proper FragmentShader system sometime
+	//DrawTo(target RenderTarget, x, y int32, width, height, pivotX, pivotY uint16, rotation float32, shader FragmentShader)
 }
 
 // Describes how to transform a sprite from the given data
@@ -241,6 +242,7 @@ type Renderer interface {
 	// in original: sampler2d
 	// in uv:       vec2
 	// out color:   vec4
-	MakeFragmentShader(source string) FragmentShader
+	// Disabled for now, seems unnessecary, and if i want a way to make effects on RenderTargets it should be designed better
+	// MakeFragmentShader(source string) FragmentShader
 	PrimaryRenderTarget() RenderTarget
 }

@@ -138,7 +138,3 @@ func (t *renderTarget) BlitTo(target render.RenderTarget, x, y int32) {
 	y = int32(target.Height()) - int32(t.Height()) - y
 	gl.BlitFramebuffer(0, 0, int32(t.Width()), int32(t.Height()), int32(x), int32(y), x+int32(t.Width()), y+int32(t.Height()), gl.COLOR_BUFFER_BIT, gl.LINEAR)
 }
-
-func (t *renderTarget) DrawTo(target render.RenderTarget, x int32, y int32, width uint16, height uint16, pivotX uint16, pivotY uint16, rotation float32, shader render.FragmentShader) {
-	panic("not implemented") // TODO: Implement
-}

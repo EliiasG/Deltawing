@@ -28,39 +28,34 @@ func (p *program) Terminate() {
 }
 
 func NewProgram(width, height uint16, name string) desktop.Program {
+	// requird for OpenGL bindings (and i think also GLFW)
 	runtime.LockOSThread()
 	e := glfw.Init()
 	if e != nil {
 		panic("GLFW failed to init with following error: " + e.Error())
 	}
-	// init window
-	glfw.WindowHint(glfw.ContextVersionMajor, 3)
-	glfw.WindowHint(glfw.ContextVersionMinor, 3)
-	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
-	glfw.WindowHint(glfw.OpenGLForwardCompatible, gl.TRUE)
-	// for layer prececion
-	glfw.WindowHint(glfw.DepthBits, 32)
-	win, e := glfw.CreateWindow(int(width), int(height), name, nil, nil)
-	if e != nil {
-		panic("Window failed to init with following error: " + e.Error())
-	}
-	win.MakeContextCurrent()
+	// window setup
+	win := makeWindow(width, height, name)
+	win.glfwWin.MakeContextCurrent()
+	// OpenGL init must be called after MakeContextCurrent
 	e = gl.Init()
 	if e != nil {
 		panic("OpenGL failed to init with following error: " + e.Error())
 	}
+	// OpenGL setup
 	gl.Enable(gl.DEPTH_TEST)
 	gl.Enable(gl.MULTISAMPLE)
 	gl.Disable(gl.CULL_FACE)
 	gl.DepthFunc(gl.GREATER)
 	gl.ClearDepth(0)
-	return &program{&window{win}, opengl.NewRenderer(
+
+	return &program{win, opengl.NewRenderer(
 		func() uint16 {
-			width, _ := win.GetSize()
+			width, _ := win.WindowSize()
 			return uint16(width)
 		},
 		func() uint16 {
-			_, height := win.GetSize()
+			_, height := win.WindowSize()
 			return uint16(height)
 		},
 	)}

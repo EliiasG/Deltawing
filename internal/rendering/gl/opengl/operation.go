@@ -92,6 +92,8 @@ func (o *operation) SetChannelValue(channel render.Channel, data any) {
 }
 
 func (o *operation) DrawTo(target render.RenderTarget) {
+	// tell OpenGl how big target is, i don't really understand why this would be required
+	gl.Viewport(0, 0, int32(target.Width()), int32(target.Height()))
 	o.bind(target)
 	o.initShader(target.Width(), target.Height())
 	// o.spriteIdxStart is *4, because the argument is in bytes, but type is 32bit

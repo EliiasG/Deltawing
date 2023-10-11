@@ -105,7 +105,3 @@ func getShaderError(shader uint32) string {
 	}
 	return ""
 }
-
-func (r *renderer) MakeFragmentShader(source string) render.FragmentShader {
-	panic("not implemented") // TODO: Implement
-}
