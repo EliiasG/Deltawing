@@ -1,6 +1,7 @@
 package glfw
 
 import (
+	"github.com/eliiasg/deltawing/input"
 	"github.com/eliiasg/glow/v3.3-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
@@ -8,6 +9,7 @@ import (
 type window struct {
 	glfwWin     *glfw.Window
 	sizeHandler func(uint16, uint16)
+	keyboard    *keyboard
 }
 
 func makeWindow(width, height uint16, name string) *window {
@@ -23,7 +25,7 @@ func makeWindow(width, height uint16, name string) *window {
 		panic("Window failed to init with following error: " + e.Error())
 	}
 	// init window
-	win := &window{glfwWin, nil}
+	win := &window{glfwWin, nil, makeKeyboard(glfwWin)}
 	glfwWin.SetSizeCallback(win.sizeCallback)
 	return win
 }
@@ -43,6 +45,7 @@ func (w *window) SetMaximized(maximized bool) {
 func (w *window) SetFullScreen(fullscreen bool) {
 	if fullscreen {
 		mon := getCurrentMonitor(w.glfwWin)
+		// mode for some reason just means information about monitor
 		mode := mon.GetVideoMode()
 		w.glfwWin.SetMonitor(mon, 0, 0, mode.Width, mode.Height, mode.RefreshRate)
 	} else {
@@ -78,6 +81,7 @@ func getCurrentMonitor(win *glfw.Window) *glfw.Monitor {
 	winX, winY := win.GetPos()
 	mons := glfw.GetMonitors()
 	for _, mon := range mons {
+		// monitor info
 		mode := mon.GetVideoMode()
 		monW, monH := mode.Width, mode.Height
 		monX, monY := mon.GetPos()
@@ -87,4 +91,16 @@ func getCurrentMonitor(win *glfw.Window) *glfw.Monitor {
 		}
 	}
 	return mons[0]
+}
+
+func (w *window) Keyboard() input.Keyboard {
+	return w.keyboard
+}
+
+func (w *window) Mouse() input.Mouse {
+	panic("not implemented") // TODO: Implement
+}
+
+func (w *window) Controller() input.Controller {
+	panic("not implemented") // TODO: Implement
 }

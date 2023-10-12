@@ -15,11 +15,11 @@ type program struct {
 	renderer render.Renderer
 }
 
-func (p *program) GetRenderer() render.Renderer {
+func (p *program) Renderer() render.Renderer {
 	return p.renderer
 }
 
-func (p *program) GetWindow() desktop.Window {
+func (p *program) Window() desktop.Window {
 	return p.window
 }
 

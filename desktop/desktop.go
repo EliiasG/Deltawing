@@ -2,11 +2,12 @@ package desktop
 
 import (
 	"github.com/eliiasg/deltawing/graphics/render"
+	"github.com/eliiasg/deltawing/input"
 )
 
 type Program interface {
-	GetRenderer() render.Renderer
-	GetWindow() Window
+	Renderer() render.Renderer
+	Window() Window
 	Terminate()
 }
 
@@ -18,4 +19,9 @@ type Window interface {
 	ShouldClose() bool
 	WindowSize() (uint16, uint16)
 	UpdateView()
+
+	// Input is local to window
+	Keyboard() input.Keyboard
+	Mouse() input.Mouse
+	Controller() input.Controller
 }

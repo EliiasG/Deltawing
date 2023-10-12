@@ -86,7 +86,7 @@ func (o *operation) SetChannelValue(channel render.Channel, data any) {
 	uniform := gl.GetUniformLocation(o.proc.progID, gl.Str(shader.ChannelName(channel)+"\x00"))
 	if !g.AssertType(shader.ChannelType(channel), data) {
 		// Maybe bad?
-		panic("Invalid type")
+		panic("Unable to set channel value: Invalid type")
 	}
 	o.uniformParams[uniform] = data
 }
