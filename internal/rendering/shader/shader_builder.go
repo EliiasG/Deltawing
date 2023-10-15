@@ -67,6 +67,7 @@ type shaderBuilder struct {
 	layerID uint16
 	xAxisID uint16
 	yAxisID uint16
+	colorID uint16
 }
 
 /*
@@ -180,6 +181,11 @@ func (s *shaderBuilder) SetXAxisChannel(channel r.Channel) (e error) {
 
 func (s *shaderBuilder) SetYAxisChannel(channel r.Channel) (e error) {
 	s.yAxisID, e = setOutputChannel(channel, r.Type(r.ShaderFloat, 2))
+	return
+}
+
+func (s *shaderBuilder) SetColorChannel(channel r.Channel) (e error) {
+	s.colorID, e = setOutputChannel(channel, r.Type(r.ShaderInt, 3))
 	return
 }
 
@@ -305,11 +311,18 @@ func (s *shaderBuilder) composeVars(shader string) (string, error) {
 		yAxis = getVarName(s.yAxisID)
 	}
 
+	// get color value
+	color := "aColor.rgb"
+	if s.colorID != 0 {
+		color = getVarName(s.colorID)
+	}
+
 	// compose
 	shader = strings.ReplaceAll(shader, "<xAxis>", xAxis)
 	shader = strings.ReplaceAll(shader, "<yAxis>", yAxis)
 	shader = strings.ReplaceAll(shader, "<pos>", getVarName(s.posID))
 	shader = strings.ReplaceAll(shader, "<layer>", getVarName(s.layerID))
+	shader = strings.ReplaceAll(shader, "<color>", color)
 
 	return shader, nil
 }

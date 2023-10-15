@@ -68,7 +68,7 @@ func SizeOf(typ InputType) uint8 {
 	return r * typ.Amount
 }
 
-// Modifies and reads from channels
+// Modifies and reads from channels, screenSize and aColor exist as variables, aColor.a is undefined
 type Function struct {
 	Parameters []ShaderType
 	Source     string
@@ -93,7 +93,7 @@ type RendererObject interface {
 
 // Used to tarnsform sprites
 // Can (and should when possible) be used for multiple different sprites
-// Must be generic because of how go interfaces work, if you wish to combine types just convert them to bytes or something
+// Must be uint because of how go interfaces work, if you wish to combine types they should be converted to uints, this can be done with buffers.AddTo
 type DataBuffer interface {
 	RendererObject
 	// Very smart to not support generic methods
@@ -124,6 +124,7 @@ func (s SpriteBufferIdentifier) spriteBuffer() {
 }
 
 type SpriteBufferBuilder interface {
+	// adds a sprite to the buffer and returns the ID
 	AddSprite(sprite *vecsprite.VecSprite) uint32
 	Finish() SpriteBuffer
 }
@@ -188,6 +189,9 @@ type ProcedureBuilder interface {
 
 	// Set the channel to use for the layer, must be an uint
 	SetLayerChannel(channel Channel) error
+
+	// Set the channel tp use for the color, must be 3 ints - if not set aColor.rgb variable be used
+	SetColorChannel(Channel Channel) error
 
 	// Use following methods for scaling and rotation, must be 2 floats per channel
 	// Before translation, every vertex in a sprite will be recalculated with the following formula: (XAxis * x + YAxis * y) where x and y is the original position

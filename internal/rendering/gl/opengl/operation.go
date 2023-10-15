@@ -13,7 +13,7 @@ type operation struct {
 	vaoID           uint32
 	attribIdxOffset uint32
 	attribIdxStart  uint32
-	amount          uint32
+	instanceAmt     uint32
 	proc            *procedure
 	uniformParams   map[int32]any
 	spriteIdxStart  int32
@@ -97,7 +97,7 @@ func (o *operation) DrawTo(target render.RenderTarget) {
 	o.bind(target)
 	o.initShader(target.Width(), target.Height())
 	// o.spriteIdxStart is *4, because the argument is in bytes, but type is 32bit
-	gl.DrawElementsInstancedBaseVertexWithOffset(gl.TRIANGLES, o.spriteIdxAmt, gl.UNSIGNED_INT, uintptr(o.spriteIdxStart*4), int32(o.amount), o.spriteVertStart)
+	gl.DrawElementsInstancedBaseVertexWithOffset(gl.TRIANGLES, o.spriteIdxAmt, gl.UNSIGNED_INT, uintptr(o.spriteIdxStart*4), int32(o.instanceAmt), o.spriteVertStart)
 }
 
 func (o *operation) bind(target render.RenderTarget) {
@@ -175,5 +175,5 @@ func (o *operation) SetSprite(buffer render.SpriteBuffer, id uint32) {
 }
 
 func (o *operation) SetAmount(amount uint32) {
-	o.amount = amount
+	o.instanceAmt = amount
 }

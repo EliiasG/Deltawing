@@ -30,7 +30,6 @@ void main() {
         0, 1.0
     );
 
-    // TODO maybe add modulate like godot
-    vertexColor = vec4(vec3(aColor.rgb)/256.0, 1);
+    vertexColor = vec4(vec3(<color>)/256.0, 1);
     layer = <layer>*uint(256) + uint(aColor.a+1);
 }
