@@ -18,7 +18,7 @@ type procedure struct {
 	render.ProcedureIdentifier
 	progID             uint32
 	screenSizeLocation int32
-	attribTypes        []render.ShaderType
+	attribChannels     map[render.Channel]shader.AttribChannelInfo
 }
 
 func (p *procedure) Free() {
@@ -26,7 +26,7 @@ func (p *procedure) Free() {
 }
 
 // will be called by the ShaderBuilder
-func compileProgram(vertSource string, attribTypes []render.ShaderType) (render.Procedure, error) {
+func compileProgram(vertSource string, attribTypes map[render.Channel]shader.AttribChannelInfo) (render.Procedure, error) {
 	// vertex shader
 	vert, err := compileShader(gl.VERTEX_SHADER, vertSource)
 	if err != nil {
@@ -48,7 +48,7 @@ func compileProgram(vertSource string, attribTypes []render.ShaderType) (render.
 	gl.DeleteShader(frag)
 	// get size uniform location
 	sizeLoc := gl.GetUniformLocation(prog, gl.Str("screenSize\x00"))
-	return &procedure{progID: prog, screenSizeLocation: sizeLoc, attribTypes: attribTypes}, nil
+	return &procedure{progID: prog, screenSizeLocation: sizeLoc, attribChannels: attribTypes}, nil
 }
 
 func createProgram(vertShader, fragShader uint32) (uint32, error) {

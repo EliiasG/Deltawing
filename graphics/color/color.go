@@ -26,6 +26,10 @@ func White() Color {
 	return FromRGBA(255, 255, 255, 255)
 }
 
+func Black() Color {
+	return FromRGBA(0, 0, 0, 255)
+}
+
 func ReadARGB(reader io.ByteReader) (Color, error) {
 	a, _ := reader.ReadByte()
 	r, _ := reader.ReadByte()

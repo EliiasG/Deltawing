@@ -100,7 +100,7 @@ type DataBuffer interface {
 	SetData8(data []uint8)
 	SetData16(data []uint16)
 	SetData32(data []uint32)
-	SetData64(dara []uint64)
+	SetData64(data []uint64)
 	// Describes layout of buffer
 	// If the data changes often then it should likely only contain one attribute
 	// For static data it might be worth combining multiple attributes into a single buffer
@@ -205,10 +205,9 @@ type ProcedureBuilder interface {
 // Describes how to draw sprites, this is more specfic than the precedure, because the procedure only says how to use data, and this says what data to use
 type Operation interface {
 	RendererObject
-	// Supply the next attribute for the procedure, this should be called as many times as the procedure has attributes
-	// The attribute added to the ProcedureBuilder first will be supplied first
-	// Offset says where in the DataBuffer to start, and the index says what data from the DataBufferLayout to use
-	AddInstanceAttribute(buffer DataBuffer, offset uint32, index uint16)
+	// Supply an attribute for the procedure, this should be called as many times as the procedure has attributes
+	// Offset says where in the DataBuffer to start, and bufferIndex says what data from the DataBufferLayout to use
+	SetInstanceAttribute(channel Channel, buffer DataBuffer, offset uint32, bufferIndex uint16)
 
 	// Set a OperationChannel returned by ProcedureBuilder.AddOperationChannel()
 	SetChannelValue(channel Channel, data any)
@@ -248,5 +247,6 @@ type Renderer interface {
 	// out color:   vec4
 	// Disabled for now, seems unnessecary, and if i want a way to make effects on RenderTargets it should be designed better
 	// MakeFragmentShader(source string) FragmentShader
+
 	PrimaryRenderTarget() RenderTarget
 }

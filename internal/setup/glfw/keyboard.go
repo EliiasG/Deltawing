@@ -54,5 +54,7 @@ func (k *keyboard) keyCallback(_ *glfw.Window, key glfw.Key, _ int, action glfw.
 }
 
 func (k *keyboard) charCallback(_ *glfw.Window, char rune) {
-	k.charTyped(char)
+	if k.charTyped != nil {
+		k.charTyped(char)
+	}
 }

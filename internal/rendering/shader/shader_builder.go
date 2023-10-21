@@ -54,7 +54,7 @@ func getVarName(id uint16) string {
 type shaderBuilder struct {
 	baseSource  string
 	version     string
-	done        func(string, []r.ShaderType) (r.Procedure, error)
+	done        func(string, map[r.Channel]AttribChannelInfo) (r.Procedure, error)
 	chanID      uint16
 	interChans  []*interChannel
 	attribChans []*glslChannel
@@ -84,7 +84,7 @@ The following keywords will be replaced:
 '<xAxis>' output xAxis variable, this should not be modified
 '<yAxis>' output xAxis variable, this should not be modified
 */
-func NewShaderBuilder(baseSource string, layoutStartPos uint8, version string, done func(string, []r.ShaderType) (r.Procedure, error)) r.ProcedureBuilder {
+func NewShaderBuilder(baseSource string, layoutStartPos uint8, version string, done func(string, map[r.Channel]AttribChannelInfo) (r.Procedure, error)) r.ProcedureBuilder {
 	return &shaderBuilder{
 		baseSource: baseSource,
 		done:       done,
@@ -346,10 +346,15 @@ func (s *shaderBuilder) composeShader() (string, error) {
 	return shader, nil
 }
 
-func (s *shaderBuilder) getAttribTypes() []r.ShaderType {
-	res := make([]r.ShaderType, 0, len(s.attribChans)+2)
-	for _, channel := range s.attribChans {
-		res = append(res, channel.varType)
+type AttribChannelInfo struct {
+	Type  r.ShaderType
+	Index uint32
+}
+
+func (s *shaderBuilder) getAttribTypes() map[r.Channel]AttribChannelInfo {
+	res := make(map[r.Channel]AttribChannelInfo)
+	for i, channel := range s.attribChans {
+		res[channel] = AttribChannelInfo{channel.varType, uint32(i) + VertexBaseInputAmt}
 	}
 	return res
 }

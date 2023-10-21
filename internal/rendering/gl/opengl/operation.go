@@ -1,8 +1,6 @@
 package opengl
 
 import (
-	"fmt"
-
 	"github.com/eliiasg/deltawing/graphics/render"
 	g "github.com/eliiasg/deltawing/internal/rendering/gl"
 	"github.com/eliiasg/deltawing/internal/rendering/shader"
@@ -11,8 +9,6 @@ import (
 
 type operation struct {
 	vaoID           uint32
-	attribIdxOffset uint32
-	attribIdxStart  uint32
 	instanceAmt     uint32
 	proc            *procedure
 	uniformParams   map[int32]any
@@ -24,18 +20,22 @@ type operation struct {
 func (r *renderer) MakeOperation(proc render.Procedure) render.Operation {
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
-	return &operation{vao, 0, shader.VertexBaseInputAmt, 0, proc.(*procedure), make(map[int32]any), 0, 0, 0}
+	return &operation{vao, 0, proc.(*procedure), make(map[int32]any), 0, 0, 0}
 }
 
 func (o *operation) Free() {
 	gl.DeleteVertexArrays(1, &o.vaoID)
 }
 
-func (o *operation) AddInstanceAttribute(buffer render.DataBuffer, offset uint32, index uint16) {
+func (o *operation) SetInstanceAttribute(channel render.Channel, buffer render.DataBuffer, offset uint32, index uint16) {
+	channelInfo := o.proc.attribChannels[channel]
 	buf := buffer.(*dataBuffer)
+	if len(buf.layout) == 0 {
+		panic("missing buffer layout")
+	}
 	// calculate offset
-	var off uintptr
-	for i := uint32(0); i < offset; i++ {
+	off := uintptr(offset) * uintptr(buf.layoutSize)
+	for i := uint16(0); i < index; i++ {
 		off += uintptr(render.SizeOf(buf.layout[i]))
 	}
 	// binding
@@ -44,17 +44,15 @@ func (o *operation) AddInstanceAttribute(buffer render.DataBuffer, offset uint32
 	// setup
 	typ := buf.layout[index]
 	// layout index
-	idx := o.attribIdxOffset + o.attribIdxStart
-	gl.EnableVertexAttribArray(idx)
+	gl.EnableVertexAttribArray(channelInfo.Index)
 	// OpenGL is more annoying than i thought, amazing!
-	// IPointer must be used if its an int to int for some reason, thouht that was what the normalized param was for
-	if shader.IsInt(o.proc.attribTypes[int(o.attribIdxOffset)].Type) {
-		gl.VertexAttribIPointerWithOffset(idx, int32(typ.Amount), glType(typ.Type), int32(buf.layoutSize), off)
+	// IPointer must be used if its an int to int for some reason, thought that was what the normalized param was for
+	if shader.IsInt(channelInfo.Type.Type) {
+		gl.VertexAttribIPointerWithOffset(channelInfo.Index, int32(typ.Amount), glType(typ.Type), int32(buf.layoutSize), off)
 	} else {
-		gl.VertexAttribPointerWithOffset(idx, int32(typ.Amount), glType(typ.Type), false, int32(buf.layoutSize), off)
+		gl.VertexAttribPointerWithOffset(channelInfo.Index, int32(typ.Amount), glType(typ.Type), false, int32(buf.layoutSize), off)
 	}
-	gl.VertexAttribDivisor(idx, 1)
-	o.attribIdxOffset++
+	gl.VertexAttribDivisor(channelInfo.Index, 1)
 }
 
 // very exiting function
@@ -160,7 +158,6 @@ func (o *operation) SetSprite(buffer render.SpriteBuffer, id uint32) {
 	o.spriteIdxStart = int32(buf.idxPositions[id])
 	o.spriteIdxAmt = int32(buf.idxPositions[id+1]) - o.spriteIdxStart
 	o.spriteVertStart = int32(buf.vertPositions[id])
-	fmt.Println(buf.idxPositions, o.spriteIdxAmt, id)
 	// setup vao
 	gl.BindVertexArray(o.vaoID)
 	gl.BindBuffer(gl.ARRAY_BUFFER, buf.vertsID)
