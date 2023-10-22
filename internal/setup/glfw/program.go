@@ -3,31 +3,35 @@ package glfw
 import (
 	"runtime"
 
-	"github.com/eliiasg/deltawing/desktop"
+	"github.com/eliiasg/deltawing/desktop/program"
 	"github.com/eliiasg/deltawing/graphics/render"
 	"github.com/eliiasg/deltawing/internal/rendering/gl/opengl"
 	"github.com/eliiasg/glow/v3.3-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
-type program struct {
+type glfwProgram struct {
 	window   *window
 	renderer render.Renderer
 }
 
-func (p *program) Renderer() render.Renderer {
+func (p *glfwProgram) Renderer() render.Renderer {
 	return p.renderer
 }
 
-func (p *program) Window() desktop.Window {
+func (p *glfwProgram) Window() program.Window {
 	return p.window
 }
 
-func (p *program) Terminate() {
+func (p *glfwProgram) Terminate() {
 	glfw.Terminate()
 }
 
-func NewProgram(width, height uint16, name string) desktop.Program {
+func (p *glfwProgram) Time() float64 {
+	return glfw.GetTime()
+}
+
+func NewProgram(width, height uint16, name string) program.Program {
 	// requird for OpenGL bindings (and i think also GLFW)
 	runtime.LockOSThread()
 	e := glfw.Init()
@@ -49,7 +53,7 @@ func NewProgram(width, height uint16, name string) desktop.Program {
 	gl.DepthFunc(gl.GREATER)
 	gl.ClearDepth(0)
 
-	return &program{win, opengl.NewRenderer(
+	return &glfwProgram{win, opengl.NewRenderer(
 		func() uint16 {
 			width, _ := win.WindowSize()
 			return uint16(width)

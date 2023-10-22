@@ -47,6 +47,9 @@ func (t *TextRenderer) AddText(x, y float32, text string) {
 			xOffset += t.SpaceSpacing
 			continue
 		}
+		if glyph < 32 {
+			continue
+		}
 		// fix glyph if not present
 		if _, ok := t.GlyphBuffer.Glyphs[glyph]; !ok {
 			glyph = t.DefaultGlyph
