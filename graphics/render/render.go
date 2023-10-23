@@ -184,7 +184,7 @@ type ProcedureBuilder interface {
 	// Adds a function, keep in mind that order matters
 	CallFunction(function *Function, channels ...Channel) error
 
-	// Sets the channel to use for the position, must be 2 ints - final position is (0, 0) in top left and (width-1, height-1) in bottom right
+	// Sets the channel to use for the position, must be 2 floats - final position is (0, 0) in top left and (width-1, height-1) in bottom right
 	SetPositionChannel(channel Channel) error
 
 	// Set the channel to use for the layer, must be an uint

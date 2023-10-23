@@ -1,8 +1,6 @@
 package text
 
 import (
-	"fmt"
-
 	"github.com/eliiasg/deltawing/graphics/render"
 	"github.com/eliiasg/deltawing/util/buffers"
 )
@@ -59,7 +57,7 @@ func (t *TextRenderer) AddText(x, y float32, text string) {
 		if !ok {
 			buffer = make([]uint64, 0)
 		}
-		buffers.AddTo(&buffer, [2]float32{x + xOffset, yOffset})
+		buffers.AddTo(&buffer, [2]float32{x + xOffset, y + yOffset})
 		t.positionData[glyph] = buffer
 		xOffset += t.GlyphBuffer.Glyphs[glyph].Advance
 	}
@@ -99,7 +97,6 @@ func (t *TextRenderer) UpdateText() {
 			i++
 		}
 	}
-	fmt.Println(i, amt)
 	t.dataBuffer.SetData64(data)
 	t.indexMap = indexMap
 }
