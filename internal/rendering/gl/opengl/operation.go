@@ -95,7 +95,7 @@ func (o *operation) DrawTo(target render.RenderTarget) {
 	o.bind(target)
 	o.initShader(target.Width(), target.Height())
 	// o.spriteIdxStart is *4, because the argument is in bytes, but type is 32bit
-	gl.DrawElementsInstancedBaseVertexWithOffset(gl.TRIANGLES, o.spriteIdxAmt, gl.UNSIGNED_INT, uintptr(o.spriteIdxStart*4), int32(o.instanceAmt), o.spriteVertStart)
+	gl.DrawElementsInstancedWithOffset(gl.TRIANGLES, o.spriteIdxAmt, gl.UNSIGNED_INT, uintptr(o.spriteIdxStart*4), int32(o.instanceAmt))
 }
 
 func (o *operation) bind(target render.RenderTarget) {
@@ -120,32 +120,24 @@ func setUniform(location int32, data any) {
 		gl.Uniform1ui(location, v)
 	case float32:
 		gl.Uniform1f(location, v)
-	case float64:
-		gl.Uniform1d(location, v)
 	case [2]int32:
 		gl.Uniform2i(location, v[0], v[1])
 	case [2]uint32:
 		gl.Uniform2ui(location, v[0], v[1])
 	case [2]float32:
 		gl.Uniform2f(location, v[0], v[1])
-	case [2]float64:
-		gl.Uniform2d(location, v[0], v[1])
 	case [3]int32:
 		gl.Uniform3i(location, v[0], v[1], v[2])
 	case [3]uint32:
 		gl.Uniform3ui(location, v[0], v[1], v[2])
 	case [3]float32:
 		gl.Uniform3f(location, v[0], v[1], v[2])
-	case [3]float64:
-		gl.Uniform3d(location, v[0], v[1], v[2])
 	case [4]int32:
 		gl.Uniform4i(location, v[0], v[1], v[2], v[3])
 	case [4]uint32:
 		gl.Uniform4ui(location, v[0], v[1], v[2], v[3])
 	case [4]float32:
 		gl.Uniform4f(location, v[0], v[1], v[2], v[3])
-	case [4]float64:
-		gl.Uniform4d(location, v[0], v[1], v[2], v[3])
 	default:
 		// type is checked when added
 		panic("This should never happen")

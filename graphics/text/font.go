@@ -6,7 +6,6 @@ import (
 	"github.com/eliiasg/deltawing/graphics/color"
 	"github.com/eliiasg/deltawing/graphics/render"
 	"github.com/eliiasg/deltawing/graphics/vecsprite"
-	"github.com/eliiasg/deltawing/math/vec"
 	"github.com/eliiasg/trifont"
 )
 
@@ -26,11 +25,11 @@ type GlyphBuffer struct {
 func SpriteFromGlyph(char *trifont.Char) *vecsprite.VecSprite {
 	sprite := new(vecsprite.VecSprite)
 	// vertices
-	sprite.Vertices = make([]vec.Vec2[float32], len(char.Vertices))
+	sprite.Vertices = make([][2]float32, len(char.Vertices))
 	sprite.Colors = make([]color.Color, len(char.Vertices))
 	sprite.Layers = make([]uint8, len(char.Vertices))
 	for i, vert := range char.Vertices {
-		sprite.Vertices[i] = vec.MakeVec2(vert[0], vert[1])
+		sprite.Vertices[i] = vert
 		sprite.Colors[i] = color.Black()
 		sprite.Layers[i] = 0
 	}

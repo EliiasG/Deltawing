@@ -24,9 +24,9 @@ func (r *renderer) MakeRenderTarget(width, height uint16, multisample bool) rend
 	gl.GenFramebuffers(1, &framebuffer)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, framebuffer)
 	// add texture
-	texture := makeTextureBuffer(width, height)
+	texture := makeTextureBuffer(width, height, multisample)
 	// add depth
-	depth := makeTextureBuffer(width, height)
+	depth := makeTextureBuffer(width, height, multisample)
 	t := &renderTarget{
 		framebufferID: framebuffer,
 		textureID:     texture,
@@ -38,17 +38,28 @@ func (r *renderer) MakeRenderTarget(width, height uint16, multisample bool) rend
 	return t
 }
 
-func makeTextureBuffer(width, height uint16) uint32 {
+func makeTextureBuffer(width, height uint16, multisample bool) uint32 {
 	// make
 	var texture uint32
-	gl.GenTextures(1, &texture)
+	if multisample {
+		gl.GenRenderbuffers(1, &texture)
+	} else {
+		gl.GenTextures(1, &texture)
+	}
+
 	return texture
 }
 
 func (t *renderTarget) Free() {
 	gl.DeleteFramebuffers(1, &t.framebufferID)
-	gl.DeleteTextures(1, &t.textureID)
-	gl.DeleteTextures(1, &t.depthID)
+	if t.multisample {
+		gl.DeleteRenderbuffers(1, &t.textureID)
+		gl.DeleteRenderbuffers(1, &t.depthID)
+	} else {
+		gl.DeleteTextures(1, &t.textureID)
+		gl.DeleteTextures(1, &t.depthID)
+	}
+
 }
 
 func (t *renderTarget) Width() uint16 {
@@ -92,8 +103,6 @@ func (t *renderTarget) resizeNormal(width, height uint16) {
 	gl.BindTexture(gl.TEXTURE_2D, t.textureID)
 	// init texture
 	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, int32(width), int32(height), 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 	// bind depthbuffer
 	gl.BindTexture(gl.TEXTURE_2D, t.depthID)
 	// init depthbuffer
@@ -105,16 +114,16 @@ func (t *renderTarget) resizeNormal(width, height uint16) {
 
 func (t *renderTarget) resizeMultisample(width, height uint16) {
 	// bind texture
-	gl.BindTexture(gl.TEXTURE_2D_MULTISAMPLE, t.textureID)
+	gl.BindRenderbuffer(gl.RENDERBUFFER, t.textureID)
 	// init texture
-	gl.TexImage2DMultisample(gl.TEXTURE_2D_MULTISAMPLE, 4, gl.RGB, int32(width), int32(height), false)
+	gl.RenderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.RGB, int32(width), int32(height))
 	// bind depthbuffer
-	gl.BindTexture(gl.TEXTURE_2D_MULTISAMPLE, t.depthID)
+	gl.BindRenderbuffer(gl.RENDERBUFFER, t.depthID)
 	// init depthbuffer
-	gl.TexImage2DMultisample(gl.TEXTURE_2D_MULTISAMPLE, 4, gl.DEPTH_COMPONENT32, int32(width), int32(height), false)
+	gl.RenderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.DEPTH_COMPONENT32, int32(width), int32(height))
 	// add to framebuffer
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D_MULTISAMPLE, t.textureID, 0)
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D_MULTISAMPLE, t.depthID, 0)
+	gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, t.textureID)
+	gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, t.depthID)
 }
 
 func getRenderTarget(target render.RenderTarget) *renderTarget {

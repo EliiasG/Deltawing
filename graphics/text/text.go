@@ -33,8 +33,35 @@ func (t *TextRenderer) Clear() {
 	}
 }
 
+func (t *TextRenderer) StringWidth(str string) float32 {
+	s := float32(0)
+	best := float32(0)
+	for _, r := range str {
+		if s > best {
+			best = s
+		}
+		if r == '\n' {
+			s = 0
+			continue
+		}
+		if r == ' ' {
+			s += t.SpaceSpacing
+			continue
+		}
+		glyph, ok := t.GlyphBuffer.Glyphs[r]
+		if !ok {
+			continue
+		}
+		s += glyph.Advance
+	}
+	if s > best {
+		return s
+	}
+	return best
+}
+
 func (t *TextRenderer) AddText(x, y float32, text string) {
-	var xOffset, yOffset float32
+	var xOffset, yOffset float32 = 0, 1
 	for _, glyph := range text {
 		if glyph == '\n' {
 			yOffset += t.LineSpacing

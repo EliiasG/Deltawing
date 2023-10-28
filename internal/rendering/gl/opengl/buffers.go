@@ -101,22 +101,30 @@ func (d *dataBuffer) Free() {
 // code repitition will work for now
 func (d *dataBuffer) SetData8(data []uint8) {
 	d.bind()
-	gl.BufferData(gl.ARRAY_BUFFER, len(data)*1, gl.Ptr(data), d.usage())
+	if len(data) > 0 {
+		gl.BufferData(gl.ARRAY_BUFFER, len(data)*1, gl.Ptr(data), d.usage())
+	}
 }
 
 func (d *dataBuffer) SetData16(data []uint16) {
 	d.bind()
-	gl.BufferData(gl.ARRAY_BUFFER, len(data)*2, gl.Ptr(data), d.usage())
+	if len(data) > 0 {
+		gl.BufferData(gl.ARRAY_BUFFER, len(data)*2, gl.Ptr(data), d.usage())
+	}
 }
 
 func (d *dataBuffer) SetData32(data []uint32) {
 	d.bind()
-	gl.BufferData(gl.ARRAY_BUFFER, len(data)*4, gl.Ptr(data), d.usage())
+	if len(data) > 0 {
+		gl.BufferData(gl.ARRAY_BUFFER, len(data)*4, gl.Ptr(data), d.usage())
+	}
 }
 
 func (d *dataBuffer) SetData64(data []uint64) {
 	d.bind()
-	gl.BufferData(gl.ARRAY_BUFFER, len(data)*8, gl.Ptr(data), d.usage())
+	if len(data) > 0 {
+		gl.BufferData(gl.ARRAY_BUFFER, len(data)*8, gl.Ptr(data), d.usage())
+	}
 }
 
 func (d *dataBuffer) SetLayout(layout ...render.InputType) {

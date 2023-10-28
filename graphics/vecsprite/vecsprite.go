@@ -7,12 +7,11 @@ import (
 	"math"
 
 	"github.com/eliiasg/deltawing/graphics/color"
-	"github.com/eliiasg/deltawing/math/vec"
 )
 
 type VecSprite struct {
 	// per vertex
-	Vertices []vec.Vec2[float32]
+	Vertices [][2]float32
 	Colors   []color.Color
 	Layers   []uint8
 	// indices
@@ -43,8 +42,8 @@ func readInds(reader io.ByteReader) []uint32 {
 
 }
 
-func readVerts(reader io.ByteReader) ([]vec.Vec2[float32], []color.Color, []uint8, error) {
-	verts := make([]vec.Vec2[float32], 0)
+func readVerts(reader io.ByteReader) ([][2]float32, []color.Color, []uint8, error) {
+	verts := make([][2]float32, 0)
 	colors := make([]color.Color, 0)
 	layers := make([]uint8, 0)
 	colorChanges := true
@@ -67,7 +66,7 @@ func readVerts(reader io.ByteReader) ([]vec.Vec2[float32], []color.Color, []uint
 			return nil, nil, nil, errors.New("Invalid bytes for vector sprite")
 		}
 
-		verts = append(verts, vec.MakeVec2(x, y))
+		verts = append(verts, [2]float32{x, y})
 		colors = append(colors, curColor)
 		layers = append(layers, layer)
 		colorChanges = change == 1

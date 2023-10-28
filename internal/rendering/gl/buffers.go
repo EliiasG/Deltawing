@@ -37,19 +37,21 @@ func CompileVecSpriteBuffer(sprites []*vecsprite.VecSprite) ([]uint32, []uint32,
 }
 
 func addSprite(verts, inds *[]uint32, sprite *vecsprite.VecSprite) {
+	// len / 3 because 3 uints per vertex
+	ln := uint32(len(*verts) / 3)
 	// add vertices
 	for i, vert := range sprite.Vertices {
 		// adding different types to the int array using unsafe
-		buffers.AddTo(verts, vert.X)
-		buffers.AddTo(verts, vert.Y)
+		buffers.AddTo(verts, vert[0])
+		buffers.AddTo(verts, vert[1])
 		col := sprite.Colors[i]
-		// r, g, a, layer as uint8s
+		// r, g, b, layer as uint8s
 		buffers.AddTo(verts, [4]uint8{col.R, col.G, col.B, sprite.Layers[i]})
 	}
 	// add indices
 	for _, idx := range sprite.Indices {
 		// maybe it should just be added directly, since the slice is same type
-		buffers.AddTo(inds, idx)
+		buffers.AddTo(inds, idx+ln)
 	}
 }
 

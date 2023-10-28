@@ -1,5 +1,3 @@
-// using 300 es to be compatible with web
-// maybe that will be changed in case special features are needed for desktop
 <version>
 layout(location = 0) in vec2 aPos;
 // color.w/a/q is layer
