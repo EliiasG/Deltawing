@@ -1,9 +1,9 @@
-package opengl
+package gl
 
 import (
 	"github.com/eliiasg/deltawing/graphics/render"
-	g "github.com/eliiasg/deltawing/internal/rendering/gl"
-	"github.com/eliiasg/deltawing/internal/rendering/shader"
+	"github.com/eliiasg/deltawing/graphics/render/gl/shader"
+	"github.com/eliiasg/deltawing/graphics/render/gl/util"
 	"github.com/eliiasg/glow/v3.3-core/gl"
 )
 
@@ -17,7 +17,7 @@ type operation struct {
 	spriteIdxAmt    int32
 }
 
-func (r *renderer) MakeOperation(proc render.Procedure) render.Operation {
+func (r *Renderer) MakeOperation(proc render.Procedure) render.Operation {
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
 	return &operation{vao, 0, proc.(*procedure), make(map[int32]any), 0, 0, 0}
@@ -47,7 +47,7 @@ func (o *operation) SetInstanceAttribute(channel render.Channel, buffer render.D
 	gl.EnableVertexAttribArray(channelInfo.Index)
 	// OpenGL is more annoying than i thought, amazing!
 	// IPointer must be used if its an int to int for some reason, thought that was what the normalized param was for
-	if shader.IsInt(channelInfo.Type.Type) {
+	if render.IsInt(channelInfo.Type.Type) {
 		gl.VertexAttribIPointerWithOffset(channelInfo.Index, int32(typ.Amount), glType(typ.Type), int32(buf.layoutSize), off)
 	} else {
 		gl.VertexAttribPointerWithOffset(channelInfo.Index, int32(typ.Amount), glType(typ.Type), false, int32(buf.layoutSize), off)
@@ -81,8 +81,9 @@ func glType(typ render.ChannelInputType) uint32 {
 }
 
 func (o *operation) SetChannelValue(channel render.Channel, data any) {
-	uniform := gl.GetUniformLocation(o.proc.progID, gl.Str(shader.ChannelName(channel)+"\x00"))
-	if !g.AssertType(shader.ChannelType(channel), data) {
+	glChan := shader.ToGLChannel(channel)
+	uniform := gl.GetUniformLocation(o.proc.progID, gl.Str(glChan.Name()+"\x00"))
+	if !util.AssertType(glChan.ShaderType(), data) {
 		// Maybe bad?
 		panic("Unable to set channel value: Invalid type")
 	}

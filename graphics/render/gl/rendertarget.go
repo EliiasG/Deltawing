@@ -1,4 +1,4 @@
-package opengl
+package gl
 
 import (
 	"github.com/eliiasg/deltawing/graphics/render"
@@ -18,7 +18,7 @@ type primaryRenderTarget struct {
 	widthFunc, heightFunc func() uint16
 }
 
-func (r *renderer) MakeRenderTarget(width, height uint16, multisample bool) render.RenderTarget {
+func (r *Renderer) MakeRenderTarget(width, height uint16, multisample bool) render.RenderTarget {
 	// make buffer
 	var framebuffer uint32
 	gl.GenFramebuffers(1, &framebuffer)

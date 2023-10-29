@@ -33,6 +33,10 @@ const (
 	// Double missing since it is not avalibe in GLSL ES 300
 )
 
+func IsInt(t ChannelShaderType) bool {
+	return t == ShaderInt || t == ShaderUnsignedInt
+}
+
 // Describes a channel
 // Channels are information used to transform sprites
 // Channels are either initalized to zero, per operation, or per sprite
@@ -191,7 +195,7 @@ type ProcedureBuilder interface {
 	SetLayerChannel(channel Channel) error
 
 	// Set the channel tp use for the color, must be 3 ints - if not set aColor.rgb variable be used
-	SetColorChannel(Channel Channel) error
+	SetColorChannel(channel Channel) error
 
 	// Use following methods for scaling and rotation, must be 2 floats per channel
 	// Before translation, every vertex in a sprite will be recalculated with the following formula: (XAxis * x + YAxis * y) where x and y is the original position

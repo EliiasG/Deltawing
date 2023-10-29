@@ -5,7 +5,7 @@ import (
 
 	"github.com/eliiasg/deltawing/desktop/program"
 	"github.com/eliiasg/deltawing/graphics/render"
-	"github.com/eliiasg/deltawing/internal/rendering/gl/opengl"
+	g "github.com/eliiasg/deltawing/graphics/render/gl"
 	"github.com/eliiasg/glow/v3.3-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
@@ -53,7 +53,7 @@ func NewProgram(width, height uint16, name string) program.Program {
 	gl.DepthFunc(gl.GREATER)
 	gl.ClearDepth(0)
 
-	return &glfwProgram{win, opengl.NewRenderer(
+	return &glfwProgram{win, g.NewRenderer(
 		func() uint16 {
 			width, _ := win.WindowSize()
 			return uint16(width)

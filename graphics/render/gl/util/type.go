@@ -1,4 +1,4 @@
-package gl
+package util
 
 import "github.com/eliiasg/deltawing/graphics/render"
 

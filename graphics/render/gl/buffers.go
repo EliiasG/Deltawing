@@ -1,18 +1,17 @@
-package opengl
+package gl
 
 import (
 	"github.com/eliiasg/deltawing/graphics/render"
+	"github.com/eliiasg/deltawing/graphics/render/gl/util"
 	"github.com/eliiasg/deltawing/graphics/vecsprite"
 	"github.com/eliiasg/glow/v3.3-core/gl"
-
-	g "github.com/eliiasg/deltawing/internal/rendering/gl"
 )
 
 /*
 	SpriteBuffer
 */
 
-func (r *renderer) MakeSpriteBufferBuilder() render.SpriteBufferBuilder {
+func (r *Renderer) MakeSpriteBufferBuilder() render.SpriteBufferBuilder {
 	return &spriteBufferBuilder{make([]*vecsprite.VecSprite, 0)}
 }
 
@@ -46,7 +45,7 @@ func (s *spriteBufferBuilder) Finish() render.SpriteBuffer {
 	sb := new(spriteBuffer)
 	var verts, inds []uint32
 	// turn sprites into arrays for verts and inds
-	verts, inds, sb.vertPositions, sb.idxPositions = g.CompileVecSpriteBuffer(s.sprites)
+	verts, inds, sb.vertPositions, sb.idxPositions = util.CompileVecSpriteBuffer(s.sprites)
 
 	// vertex buffer
 	gl.GenBuffers(1, &sb.vertsID)
@@ -65,7 +64,7 @@ func (s *spriteBufferBuilder) Finish() render.SpriteBuffer {
 	DataBuffer
 */
 
-func (r *renderer) MakeDataBuffer(static bool) render.DataBuffer {
+func (r *Renderer) MakeDataBuffer(static bool) render.DataBuffer {
 	var id uint32
 	gl.GenBuffers(1, &id)
 	return &dataBuffer{

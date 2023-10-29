@@ -1,9 +1,7 @@
-package shader
+package shader_sources
 
 import (
 	_ "embed"
-
-	"github.com/eliiasg/deltawing/graphics/render"
 )
 
 const VertexBaseInputAmt = 2
@@ -19,8 +17,6 @@ var FragmentSource string
 func init() {
 	// to avoid sahder comp error
 	FragmentSource += "\x00"
-}
-
-func IsInt(t render.ChannelShaderType) bool {
-	return t == render.ShaderInt || t == render.ShaderUnsignedInt
+	// tecnically not required, since ShaderBuilder adds end automatically, but seems nice to do it here
+	VertexBaseSource += "\x00"
 }

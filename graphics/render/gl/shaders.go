@@ -1,4 +1,4 @@
-package opengl
+package gl
 
 import (
 	"errors"
@@ -6,12 +6,73 @@ import (
 	"strings"
 
 	"github.com/eliiasg/deltawing/graphics/render"
-	"github.com/eliiasg/deltawing/internal/rendering/shader"
+	"github.com/eliiasg/deltawing/graphics/render/gl/shader"
+	"github.com/eliiasg/deltawing/internal/rendering/shader_sources"
 	"github.com/eliiasg/glow/v3.3-core/gl"
 )
 
-func (r *renderer) MakeProcedureBuilder() render.ProcedureBuilder {
-	return shader.NewShaderBuilder(shader.VertexBaseSource, 2, "#version 330 core", compileProgram)
+type procedureBuilder struct {
+	sb *shader.ShaderBuilder
+}
+
+func (r *Renderer) MakeProcedureBuilder() render.ProcedureBuilder {
+	source := shader.ShaderSource{
+		SourceCode:     shader_sources.VertexBaseSource,
+		LayoutStartPos: 2,
+		Version:        "#version 330 core",
+		Variables: []shader.Variable{
+			{Name: "pos", Type: render.Type(render.ShaderFloat, 2), DefaultValue: ""},
+			{Name: "layer", Type: render.Type(render.ShaderUnsignedInt, 1), DefaultValue: ""},
+			{Name: "color", Type: render.Type(render.ShaderInt, 3), DefaultValue: "aColor.rgb"},
+			{Name: "xAxis", Type: render.Type(render.ShaderFloat, 2), DefaultValue: "vec2(1, 0)"},
+			{Name: "yAxis", Type: render.Type(render.ShaderFloat, 2), DefaultValue: "vec2(0, 1)"},
+		},
+	}
+	return &procedureBuilder{shader.NewShaderBuilder(source)}
+}
+
+func (p *procedureBuilder) AddAttributeChannel(shaderType render.ShaderType) render.Channel {
+	return p.sb.AddAttributeChannel(shaderType)
+}
+
+func (p *procedureBuilder) AddIntermediateChannel(shaderType render.ShaderType, expression string) render.Channel {
+	return p.sb.AddIntermediateChannel(shaderType, expression)
+}
+
+func (p *procedureBuilder) AddOperationChannel(shaderType render.ShaderType) render.Channel {
+	return p.sb.AddOperationChannel(shaderType)
+}
+
+func (p *procedureBuilder) CallFunction(function *render.Function, channels ...render.Channel) error {
+	return p.sb.CallFunction(function, channels...)
+}
+
+func (p *procedureBuilder) SetColorChannel(channel render.Channel) error {
+	return p.sb.SetOutputChannel("color", channel)
+}
+
+func (p *procedureBuilder) SetLayerChannel(channel render.Channel) error {
+	return p.sb.SetOutputChannel("layer", channel)
+}
+
+func (p *procedureBuilder) SetPositionChannel(channel render.Channel) error {
+	return p.sb.SetOutputChannel("pos", channel)
+}
+
+func (p *procedureBuilder) SetXAxisChannel(channel render.Channel) error {
+	return p.sb.SetOutputChannel("xAxis", channel)
+}
+
+func (p *procedureBuilder) SetYAxisChannel(channel render.Channel) error {
+	return p.sb.SetOutputChannel("yAxis", channel)
+}
+
+func (p *procedureBuilder) Finish() (render.Procedure, error) {
+	vertSource, attribTypes, err := p.sb.Finish()
+	if err != nil {
+		return nil, err
+	}
+	return compileProgram(vertSource, attribTypes)
 }
 
 type procedure struct {
@@ -34,7 +95,7 @@ func compileProgram(vertSource string, attribTypes map[render.Channel]shader.Att
 	}
 	// fragment shader
 	// FIXME fragment shader is not generated at runtime, so maybe only compile once
-	frag, err := compileShader(gl.FRAGMENT_SHADER, shader.FragmentSource)
+	frag, err := compileShader(gl.FRAGMENT_SHADER, shader_sources.FragmentSource)
 	if err != nil {
 		return nil, err
 	}
