@@ -6,6 +6,7 @@ import (
 	"github.com/eliiasg/deltawing/desktop/program"
 	"github.com/eliiasg/deltawing/graphics/render"
 	g "github.com/eliiasg/deltawing/graphics/render/gl"
+	"github.com/eliiasg/deltawing/internal/rendering/opengl"
 	"github.com/eliiasg/glow/v3.3-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
@@ -62,5 +63,6 @@ func NewProgram(width, height uint16, name string) program.Program {
 			_, height := win.WindowSize()
 			return uint16(height)
 		},
+		opengl.MakeContext(),
 	)}
 }

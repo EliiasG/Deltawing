@@ -10,36 +10,36 @@ import (
 	"github.com/eliiasg/deltawing/internal/rendering/shader_sources"
 )
 
-type GlChannel struct {
+type Channel struct {
 	r.ChannelIdentifier
 	id      uint16
 	varType r.ShaderType
 }
 
-func (c *GlChannel) Name() string {
+func (c *Channel) Name() string {
 	return "c" + strconv.Itoa(int(c.id))
 }
 
-func (c *GlChannel) ShaderType() r.ShaderType {
+func (c *Channel) ShaderType() r.ShaderType {
 	return c.varType
 }
 
 type funcCall struct {
 	fun    *r.Function
-	params []*GlChannel
+	params []*Channel
 }
 
 type interChannel struct {
-	*GlChannel
+	*Channel
 	expr string
 }
 
-func ToGLChannel(channel r.Channel) *GlChannel {
+func GLChannel(channel r.Channel) *Channel {
 	switch c := channel.(type) {
-	case *GlChannel:
+	case *Channel:
 		return c
 	case *interChannel:
-		return c.GlChannel
+		return c.Channel
 	}
 	return nil
 }
@@ -50,8 +50,8 @@ type ShaderBuilder struct {
 	version     string
 	chanID      uint16
 	interChans  []*interChannel
-	attribChans []*GlChannel
-	operChans   []*GlChannel
+	attribChans []*Channel
+	operChans   []*Channel
 	calls       []funcCall
 	// start position of layout
 	startPos uint8
@@ -111,8 +111,8 @@ func NewShaderBuilder(source ShaderSource) *ShaderBuilder {
 		// start index of channels, 0 is used unset channels
 		chanID:      1,
 		interChans:  make([]*interChannel, 0),
-		attribChans: make([]*GlChannel, 0),
-		operChans:   make([]*GlChannel, 0),
+		attribChans: make([]*Channel, 0),
+		operChans:   make([]*Channel, 0),
 		calls:       make([]funcCall, 0),
 		startPos:    source.LayoutStartPos,
 		version:     source.Version,
@@ -121,8 +121,8 @@ func NewShaderBuilder(source ShaderSource) *ShaderBuilder {
 	}
 }
 
-func (s *ShaderBuilder) makeChannel(varType r.ShaderType) *GlChannel {
-	channel := &GlChannel{
+func (s *ShaderBuilder) makeChannel(varType r.ShaderType) *Channel {
+	channel := &Channel{
 		id:      s.chanID,
 		varType: varType,
 	}
@@ -158,12 +158,12 @@ func (s *ShaderBuilder) CallFunction(function *r.Function, channels ...r.Channel
 
 	call := funcCall{
 		fun:    function,
-		params: make([]*GlChannel, 0),
+		params: make([]*Channel, 0),
 	}
 
 	// set params of call, and check for wrong parameters
 	for i, channel := range channels {
-		glChan := ToGLChannel(channel)
+		glChan := GLChannel(channel)
 		param := function.Parameters[i]
 		if glChan.varType != param {
 			typ := glChan.varType
@@ -178,7 +178,7 @@ func (s *ShaderBuilder) CallFunction(function *r.Function, channels ...r.Channel
 }
 
 func (s *ShaderBuilder) SetOutputChannel(varName string, channel r.Channel) error {
-	glChan := ToGLChannel(channel)
+	glChan := GLChannel(channel)
 	if glChan.ShaderType() != s.shaderVars[varName].typ {
 		return errors.New("Invalid type for " + varName)
 	}

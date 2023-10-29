@@ -4,55 +4,64 @@ import (
 	"github.com/eliiasg/deltawing/graphics/render"
 	"github.com/eliiasg/deltawing/graphics/render/gl/shader"
 	"github.com/eliiasg/deltawing/graphics/render/gl/util"
-	"github.com/eliiasg/glow/v3.3-core/gl"
+	"github.com/eliiasg/glow/enum"
 )
 
-type operation struct {
-	vaoID           uint32
-	instanceAmt     uint32
-	proc            *procedure
-	uniformParams   map[int32]any
-	spriteIdxStart  int32
-	spriteVertStart int32
-	spriteIdxAmt    int32
+type Operation struct {
+	cxt Context
+	// Vao Object
+	Vao any
+	// Amount of instances to draw
+	InstanceAmt uint32
+	// Procedure to use for drawing
+	Proc *Procedure
+	// Parameters for uniforms: map[uniform location]uniform value
+	UniformParams map[any]any
+	// Start index of sprite in
+	SpriteIdxStart int32
+	// Amount of indices in sprite
+	SpriteIdxAmt int32
+}
+
+func GLOperation(o render.Operation) (*Operation, bool) {
+	res, ok := o.(*Operation)
+	return res, ok
 }
 
 func (r *Renderer) MakeOperation(proc render.Procedure) render.Operation {
-	var vao uint32
-	gl.GenVertexArrays(1, &vao)
-	return &operation{vao, 0, proc.(*procedure), make(map[int32]any), 0, 0, 0}
+	return &Operation{r.cxt, r.cxt.CreateVertexArray(), 0, proc.(*Procedure), make(map[any]any), 0, 0}
 }
 
-func (o *operation) Free() {
-	gl.DeleteVertexArrays(1, &o.vaoID)
+func (o *Operation) Free() {
+	o.cxt.DeleteVertexArray(o.Vao)
 }
 
-func (o *operation) SetInstanceAttribute(channel render.Channel, buffer render.DataBuffer, offset uint32, index uint16) {
-	channelInfo := o.proc.attribChannels[channel]
+func (o *Operation) SetInstanceAttribute(channel render.Channel, buffer render.DataBuffer, offset uint32, index uint16) {
+	channelInfo := o.Proc.AttribChannels[channel]
 	buf := buffer.(*dataBuffer)
-	if len(buf.layout) == 0 {
+	if len(buf.Layout) == 0 {
 		panic("missing buffer layout")
 	}
 	// calculate offset
-	off := uintptr(offset) * uintptr(buf.layoutSize)
+	off := uintptr(offset) * uintptr(buf.LayoutSize)
 	for i := uint16(0); i < index; i++ {
-		off += uintptr(render.SizeOf(buf.layout[i]))
+		off += uintptr(render.SizeOf(buf.Layout[i]))
 	}
 	// binding
-	gl.BindVertexArray(o.vaoID)
-	gl.BindBuffer(gl.ARRAY_BUFFER, buf.id)
+	o.cxt.BindVertexArray(o.Vao)
+	o.cxt.BindBuffer(enum.ARRAY_BUFFER, buf.Buffer)
 	// setup
-	typ := buf.layout[index]
+	typ := buf.Layout[index]
 	// layout index
-	gl.EnableVertexAttribArray(channelInfo.Index)
+	o.cxt.EnableVertexAttribArray(channelInfo.Index)
 	// OpenGL is more annoying than i thought, amazing!
 	// IPointer must be used if its an int to int for some reason, thought that was what the normalized param was for
 	if render.IsInt(channelInfo.Type.Type) {
-		gl.VertexAttribIPointerWithOffset(channelInfo.Index, int32(typ.Amount), glType(typ.Type), int32(buf.layoutSize), off)
+		o.cxt.VertexAttribIPointer(channelInfo.Index, int32(typ.Amount), glType(typ.Type), int32(buf.LayoutSize), off)
 	} else {
-		gl.VertexAttribPointerWithOffset(channelInfo.Index, int32(typ.Amount), glType(typ.Type), false, int32(buf.layoutSize), off)
+		o.cxt.VertexAttribPointer(channelInfo.Index, int32(typ.Amount), glType(typ.Type), false, int32(buf.LayoutSize), off)
 	}
-	gl.VertexAttribDivisor(channelInfo.Index, 1)
+	o.cxt.VertexAttribDivisor(channelInfo.Index, 1)
 }
 
 // very exiting function
@@ -60,110 +69,110 @@ func (o *operation) SetInstanceAttribute(channel render.Channel, buffer render.D
 func glType(typ render.ChannelInputType) uint32 {
 	switch typ {
 	case render.InputByte:
-		return gl.BYTE
+		return enum.BYTE
 	case render.InputUnsignedByte:
-		return gl.UNSIGNED_BYTE
+		return enum.UNSIGNED_BYTE
 	case render.InputShort:
-		return gl.SHORT
+		return enum.SHORT
 	case render.InputUnsignedShort:
-		return gl.UNSIGNED_SHORT
+		return enum.UNSIGNED_SHORT
 	case render.InputInt:
-		return gl.INT
+		return enum.INT
 	case render.InputUnsignedInt:
-		return gl.UNSIGNED_INT
+		return enum.UNSIGNED_INT
 	case render.InputFloat:
-		return gl.FLOAT
+		return enum.FLOAT
 	case render.InputDouble:
-		return gl.DOUBLE
+		return enum.DOUBLE
 	default:
 		return 0
 	}
 }
 
-func (o *operation) SetChannelValue(channel render.Channel, data any) {
-	glChan := shader.ToGLChannel(channel)
-	uniform := gl.GetUniformLocation(o.proc.progID, gl.Str(glChan.Name()+"\x00"))
+func (o *Operation) SetChannelValue(channel render.Channel, data any) {
+	glChan := shader.GLChannel(channel)
+	uniform := o.cxt.GetUniformLocation(o.Proc.Prog, glChan.Name()+"\x00")
 	if !util.AssertType(glChan.ShaderType(), data) {
 		// Maybe bad?
 		panic("Unable to set channel value: Invalid type")
 	}
-	o.uniformParams[uniform] = data
+	o.UniformParams[uniform] = data
 }
 
-func (o *operation) DrawTo(target render.RenderTarget) {
+func (o *Operation) DrawTo(target render.RenderTarget) {
 	// tell OpenGl how big target is, i don't really understand why this would be required
-	gl.Viewport(0, 0, int32(target.Width()), int32(target.Height()))
+	o.cxt.Viewport(0, 0, int32(target.Width()), int32(target.Height()))
 	o.bind(target)
 	o.initShader(target.Width(), target.Height())
 	// o.spriteIdxStart is *4, because the argument is in bytes, but type is 32bit
-	gl.DrawElementsInstancedWithOffset(gl.TRIANGLES, o.spriteIdxAmt, gl.UNSIGNED_INT, uintptr(o.spriteIdxStart*4), int32(o.instanceAmt))
+	o.cxt.DrawElementsInstanced(enum.TRIANGLES, o.SpriteIdxAmt, enum.UNSIGNED_INT, uintptr(o.SpriteIdxStart*4), int32(o.InstanceAmt))
 }
 
-func (o *operation) bind(target render.RenderTarget) {
-	gl.UseProgram(o.proc.progID)
-	gl.BindVertexArray(o.vaoID)
-	gl.BindFramebuffer(gl.FRAMEBUFFER, getRenderTarget(target).framebufferID)
+func (o *Operation) bind(target render.RenderTarget) {
+	o.cxt.UseProgram(o.Proc.Prog)
+	o.cxt.BindVertexArray(o.Vao)
+	tar, _ := GLRenderTarget(target)
+	o.cxt.BindFramebuffer(enum.FRAMEBUFFER, tar.Framebuffer)
 }
 
-func (o *operation) initShader(width, height uint16) {
-	for location, value := range o.uniformParams {
-		setUniform(location, value)
+func (o *Operation) initShader(width, height uint16) {
+	for location, value := range o.UniformParams {
+		setUniform(o.cxt, location, value)
 	}
-	setUniform(o.proc.screenSizeLocation, [2]int32{int32(width), int32(height)})
+	setUniform(o.cxt, o.Proc.ScreenSizeLocation, [2]int32{int32(width), int32(height)})
 }
 
 // very smart to have a function for every type, i just love OpenGL
-func setUniform(location int32, data any) {
+func setUniform(cxt Context, location any, data any) {
 	switch v := data.(type) {
 	case int32:
-		gl.Uniform1i(location, v)
+		cxt.Uniform1i(location, v)
 	case uint32:
-		gl.Uniform1ui(location, v)
+		cxt.Uniform1ui(location, v)
 	case float32:
-		gl.Uniform1f(location, v)
+		cxt.Uniform1f(location, v)
 	case [2]int32:
-		gl.Uniform2i(location, v[0], v[1])
+		cxt.Uniform2i(location, v[0], v[1])
 	case [2]uint32:
-		gl.Uniform2ui(location, v[0], v[1])
+		cxt.Uniform2ui(location, v[0], v[1])
 	case [2]float32:
-		gl.Uniform2f(location, v[0], v[1])
+		cxt.Uniform2f(location, v[0], v[1])
 	case [3]int32:
-		gl.Uniform3i(location, v[0], v[1], v[2])
+		cxt.Uniform3i(location, v[0], v[1], v[2])
 	case [3]uint32:
-		gl.Uniform3ui(location, v[0], v[1], v[2])
+		cxt.Uniform3ui(location, v[0], v[1], v[2])
 	case [3]float32:
-		gl.Uniform3f(location, v[0], v[1], v[2])
+		cxt.Uniform3f(location, v[0], v[1], v[2])
 	case [4]int32:
-		gl.Uniform4i(location, v[0], v[1], v[2], v[3])
+		cxt.Uniform4i(location, v[0], v[1], v[2], v[3])
 	case [4]uint32:
-		gl.Uniform4ui(location, v[0], v[1], v[2], v[3])
+		cxt.Uniform4ui(location, v[0], v[1], v[2], v[3])
 	case [4]float32:
-		gl.Uniform4f(location, v[0], v[1], v[2], v[3])
+		cxt.Uniform4f(location, v[0], v[1], v[2], v[3])
 	default:
 		// type is checked when added
 		panic("This should never happen")
 	}
 }
 
-func (o *operation) SetSprite(buffer render.SpriteBuffer, id uint32) {
-	buf := buffer.(*spriteBuffer)
+func (o *Operation) SetSprite(buffer render.SpriteBuffer, id uint32) {
+	buf := buffer.(*SpriteBuffer)
 	// tell operation what sprite to draw
-	o.spriteIdxStart = int32(buf.idxPositions[id])
-	o.spriteIdxAmt = int32(buf.idxPositions[id+1]) - o.spriteIdxStart
-	o.spriteVertStart = int32(buf.vertPositions[id])
+	o.SpriteIdxStart = int32(buf.IdxPositions[id])
+	o.SpriteIdxAmt = int32(buf.IdxPositions[id+1]) - o.SpriteIdxStart
 	// setup vao
-	gl.BindVertexArray(o.vaoID)
-	gl.BindBuffer(gl.ARRAY_BUFFER, buf.vertsID)
+	o.cxt.BindVertexArray(o.Vao)
+	o.cxt.BindBuffer(enum.ARRAY_BUFFER, buf.Verts)
 	// to store on VAO
-	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf.indsID)
+	o.cxt.BindBuffer(enum.ELEMENT_ARRAY_BUFFER, buf.Inds)
 	// position
-	gl.EnableVertexAttribArray(0)
-	gl.VertexAttribPointerWithOffset(0, 2, gl.FLOAT, false, 12, 0)
+	o.cxt.EnableVertexAttribArray(0)
+	o.cxt.VertexAttribPointer(0, 2, enum.FLOAT, false, 12, 0)
 	// color / layer
-	gl.EnableVertexAttribArray(1)
-	gl.VertexAttribIPointerWithOffset(1, 4, gl.UNSIGNED_BYTE, 12, 8)
+	o.cxt.EnableVertexAttribArray(1)
+	o.cxt.VertexAttribIPointer(1, 4, enum.UNSIGNED_BYTE, 12, 8)
 }
 
-func (o *operation) SetAmount(amount uint32) {
-	o.instanceAmt = amount
+func (o *Operation) SetAmount(amount uint32) {
+	o.InstanceAmt = amount
 }

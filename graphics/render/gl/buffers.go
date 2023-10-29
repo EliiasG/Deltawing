@@ -4,7 +4,7 @@ import (
 	"github.com/eliiasg/deltawing/graphics/render"
 	"github.com/eliiasg/deltawing/graphics/render/gl/util"
 	"github.com/eliiasg/deltawing/graphics/vecsprite"
-	"github.com/eliiasg/glow/v3.3-core/gl"
+	"github.com/eliiasg/glow/enum"
 )
 
 /*
@@ -12,25 +12,34 @@ import (
 */
 
 func (r *Renderer) MakeSpriteBufferBuilder() render.SpriteBufferBuilder {
-	return &spriteBufferBuilder{make([]*vecsprite.VecSprite, 0)}
+	return &spriteBufferBuilder{r.cxt, make([]*vecsprite.VecSprite, 0)}
 }
 
+// not making builders public, since they dont directly interact with gl
 type spriteBufferBuilder struct {
+	cxt     Context
 	sprites []*vecsprite.VecSprite
 }
 
-type spriteBuffer struct {
+type SpriteBuffer struct {
 	render.SpriteBufferIdentifier
-	vertsID       uint32
-	indsID        uint32
-	vertPositions []uint32
-	idxPositions  []uint32
+	cxt Context
+	// Buffer of verts
+	Verts any
+	// Buffer of inds
+	Inds any
+	// Start indices for every sprite, first is 0, last is len(Inds)
+	IdxPositions []uint32
 }
 
-func (s *spriteBuffer) Free() {
-	// doing multiple because function expects pointer and this seems easier that getting a pointer for both of them
-	gl.DeleteBuffers(1, &s.vertsID)
-	gl.DeleteBuffers(1, &s.indsID)
+func GLSpriteBuffer(s render.SpriteBuffer) (*SpriteBuffer, bool) {
+	res, ok := s.(*SpriteBuffer)
+	return res, ok
+}
+
+func (s *SpriteBuffer) Free() {
+	s.cxt.DeleteBuffer(s.Verts)
+	s.cxt.DeleteBuffer(s.Inds)
 }
 
 func (s *spriteBufferBuilder) AddSprite(sprite *vecsprite.VecSprite) uint32 {
@@ -41,22 +50,23 @@ func (s *spriteBufferBuilder) AddSprite(sprite *vecsprite.VecSprite) uint32 {
 
 func (s *spriteBufferBuilder) Finish() render.SpriteBuffer {
 	// make sure to not modify some VAO
-	gl.BindVertexArray(0)
-	sb := new(spriteBuffer)
+	s.cxt.BindVertexArray(nil)
+	sb := new(SpriteBuffer)
+	sb.cxt = s.cxt
 	var verts, inds []uint32
 	// turn sprites into arrays for verts and inds
-	verts, inds, sb.vertPositions, sb.idxPositions = util.CompileVecSpriteBuffer(s.sprites)
+	verts, inds, sb.IdxPositions = util.CompileVecSpriteBuffer(s.sprites)
 
 	// vertex buffer
-	gl.GenBuffers(1, &sb.vertsID)
-	gl.BindBuffer(gl.ARRAY_BUFFER, sb.vertsID)
+	sb.Verts = s.cxt.CreateBuffer()
+	s.cxt.BindBuffer(enum.ARRAY_BUFFER, sb.Verts)
 	// only * 4 because type is slice of uint32
-	gl.BufferData(gl.ARRAY_BUFFER, len(verts)*4, gl.Ptr(verts), gl.STATIC_DRAW)
+	s.cxt.BufferData(enum.ARRAY_BUFFER, verts, enum.STATIC_DRAW)
 
 	// index buffer
-	gl.GenBuffers(1, &sb.indsID)
-	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, sb.indsID)
-	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(inds)*4, gl.Ptr(inds), gl.STATIC_DRAW)
+	sb.Inds = s.cxt.CreateBuffer()
+	s.cxt.BindBuffer(enum.ELEMENT_ARRAY_BUFFER, sb.Inds)
+	s.cxt.BufferData(enum.ELEMENT_ARRAY_BUFFER, inds, enum.STATIC_DRAW)
 	return sb
 }
 
@@ -64,36 +74,40 @@ func (s *spriteBufferBuilder) Finish() render.SpriteBuffer {
 	DataBuffer
 */
 
-func (r *Renderer) MakeDataBuffer(static bool) render.DataBuffer {
-	var id uint32
-	gl.GenBuffers(1, &id)
-	return &dataBuffer{
-		id:     id,
-		static: static,
-	}
+type dataBuffer struct {
+	cxt Context
+	// buffer for data
+	Buffer any
+	// true if usgae is STATIC_DRAW
+	Static bool
+	// layout is part of VAO in opengl, so the glCalls should happen in the operation
+	// Buffer layout of interleaved
+	Layout []render.InputType
+	// Size in bytes of a section of the buffer
+	LayoutSize uint16
 }
 
-type dataBuffer struct {
-	id     uint32
-	static bool
-	// layout is part of VAO in opengl, so the glCalls should happen in the operation
-	layout     []render.InputType
-	layoutSize uint16
+func (r *Renderer) MakeDataBuffer(static bool) render.DataBuffer {
+	return &dataBuffer{
+		cxt:    r.cxt,
+		Buffer: r.cxt.CreateBuffer(),
+		Static: static,
+	}
 }
 
 func (d *dataBuffer) usage() uint32 {
-	if d.static {
-		return gl.STATIC_DRAW
+	if d.Static {
+		return enum.STATIC_DRAW
 	}
-	return gl.DYNAMIC_DRAW
+	return enum.DYNAMIC_DRAW
 }
 
 func (d *dataBuffer) bind() {
-	gl.BindBuffer(gl.ARRAY_BUFFER, d.id)
+	d.cxt.BindBuffer(enum.ARRAY_BUFFER, d.Buffer)
 }
 
 func (d *dataBuffer) Free() {
-	gl.DeleteBuffers(1, &d.id)
+	d.cxt.DeleteBuffer(d.Buffer)
 }
 
 // if only generic methods were a thing...
@@ -101,35 +115,35 @@ func (d *dataBuffer) Free() {
 func (d *dataBuffer) SetData8(data []uint8) {
 	d.bind()
 	if len(data) > 0 {
-		gl.BufferData(gl.ARRAY_BUFFER, len(data)*1, gl.Ptr(data), d.usage())
+		d.cxt.BufferData(enum.ARRAY_BUFFER, data, d.usage())
 	}
 }
 
 func (d *dataBuffer) SetData16(data []uint16) {
 	d.bind()
 	if len(data) > 0 {
-		gl.BufferData(gl.ARRAY_BUFFER, len(data)*2, gl.Ptr(data), d.usage())
+		d.cxt.BufferData(enum.ARRAY_BUFFER, data, d.usage())
 	}
 }
 
 func (d *dataBuffer) SetData32(data []uint32) {
 	d.bind()
 	if len(data) > 0 {
-		gl.BufferData(gl.ARRAY_BUFFER, len(data)*4, gl.Ptr(data), d.usage())
+		d.cxt.BufferData(enum.ARRAY_BUFFER, data, d.usage())
 	}
 }
 
 func (d *dataBuffer) SetData64(data []uint64) {
 	d.bind()
 	if len(data) > 0 {
-		gl.BufferData(gl.ARRAY_BUFFER, len(data)*8, gl.Ptr(data), d.usage())
+		d.cxt.BufferData(enum.ARRAY_BUFFER, data, d.usage())
 	}
 }
 
 func (d *dataBuffer) SetLayout(layout ...render.InputType) {
-	d.layout = layout
-	d.layoutSize = 0
-	for _, elem := range d.layout {
-		d.layoutSize += uint16(render.SizeOf(elem))
+	d.Layout = layout
+	d.LayoutSize = 0
+	for _, elem := range d.Layout {
+		d.LayoutSize += uint16(render.SizeOf(elem))
 	}
 }

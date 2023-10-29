@@ -2,67 +2,81 @@ package gl
 
 import (
 	"github.com/eliiasg/deltawing/graphics/render"
-	"github.com/eliiasg/glow/v3.3-core/gl"
+	"github.com/eliiasg/glow/enum"
 )
 
-type renderTarget struct {
-	framebufferID uint32
-	textureID     uint32
-	depthID       uint32
+type RenderTarget struct {
+	cxt Context
+	// Framebuffer object
+	Framebuffer any
+	// DrawBuffer object, this is either a texture or a renderbuffer (if multisampled)
+	DrawBuffer any
+	// DepthBuffer object, again eithr a texture or a renderbuffer (if multisampled)
+	DepthBuffer   any
+	Multisample   bool
 	width, height uint16
-	multisample   bool
 }
 
 type primaryRenderTarget struct {
-	*renderTarget
+	*RenderTarget
 	widthFunc, heightFunc func() uint16
+}
+
+func GLRenderTarget(target render.RenderTarget) (*RenderTarget, bool) {
+	switch t := target.(type) {
+	case *RenderTarget:
+		return t, true
+	case *primaryRenderTarget:
+		return t.RenderTarget, true
+	}
+	return nil, false
 }
 
 func (r *Renderer) MakeRenderTarget(width, height uint16, multisample bool) render.RenderTarget {
 	// make buffer
-	var framebuffer uint32
-	gl.GenFramebuffers(1, &framebuffer)
-	gl.BindFramebuffer(gl.FRAMEBUFFER, framebuffer)
+	framebuffer := r.cxt.CreateFramebuffer()
+	r.cxt.BindFramebuffer(enum.FRAMEBUFFER, framebuffer)
 	// add texture
-	texture := makeTextureBuffer(width, height, multisample)
+	texture := makeTextureBuffer(r.cxt, multisample)
 	// add depth
-	depth := makeTextureBuffer(width, height, multisample)
-	t := &renderTarget{
-		framebufferID: framebuffer,
-		textureID:     texture,
-		depthID:       depth,
-		multisample:   multisample,
+	depth := makeTextureBuffer(r.cxt, multisample)
+	t := &RenderTarget{
+		cxt:         r.cxt,
+		Framebuffer: framebuffer,
+		DrawBuffer:  texture,
+		DepthBuffer: depth,
+		Multisample: multisample,
 	}
 	// to init texture and depthbuffer
 	t.Resize(width, height)
 	return t
 }
 
-func makeTextureBuffer(width, height uint16, multisample bool) uint32 {
+func makeTextureBuffer(cxt Context, multisample bool) any {
 	// make
-	var texture uint32
+	var texture any
 	if multisample {
-		gl.GenRenderbuffers(1, &texture)
+		texture = cxt.CreateRenderbuffer()
 	} else {
-		gl.GenTextures(1, &texture)
+		texture = cxt.CreateTexture()
 	}
 
 	return texture
 }
 
-func (t *renderTarget) Free() {
-	gl.DeleteFramebuffers(1, &t.framebufferID)
-	if t.multisample {
-		gl.DeleteRenderbuffers(1, &t.textureID)
-		gl.DeleteRenderbuffers(1, &t.depthID)
+func (t *RenderTarget) Free() {
+	t.cxt.DeleteFramebuffer(t.Framebuffer)
+	if t.Multisample {
+		t.cxt.DeleteRenderbuffer(t.DrawBuffer)
+		t.cxt.DeleteRenderbuffer(t.DepthBuffer)
 	} else {
-		gl.DeleteTextures(1, &t.textureID)
-		gl.DeleteTextures(1, &t.depthID)
+		t.cxt.DeleteTexture(t.DrawBuffer)
+		t.cxt.DeleteTexture(t.DepthBuffer)
 	}
 
 }
 
-func (t *renderTarget) Width() uint16 {
+func (t *RenderTarget) Width() uint16 {
 	return t.width
 }
 
@@ -70,7 +84,7 @@ func (t *primaryRenderTarget) Width() uint16 {
 	return t.widthFunc()
 }
 
-func (t *renderTarget) Height() uint16 {
+func (t *RenderTarget) Height() uint16 {
 	return t.height
 }
 
@@ -78,72 +92,62 @@ func (t *primaryRenderTarget) Height() uint16 {
 	return t.heightFunc()
 }
 
-func (t *renderTarget) Clear(r uint8, g uint8, b uint8) {
-	gl.BindFramebuffer(gl.FRAMEBUFFER, t.framebufferID)
-	gl.ClearColor(float32(r)/256, float32(g)/256, float32(b)/256, 1.0)
-	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+func (t *RenderTarget) Clear(r uint8, g uint8, b uint8) {
+	t.cxt.BindFramebuffer(enum.FRAMEBUFFER, t.Framebuffer)
+	t.cxt.ClearColor(float32(r)/256, float32(g)/256, float32(b)/256, 1.0)
+	t.cxt.Clear(enum.COLOR_BUFFER_BIT | enum.DEPTH_BUFFER_BIT)
 }
 
-func (t *renderTarget) Resize(width, height uint16) {
-	if t.framebufferID == 0 {
+func (t *RenderTarget) Resize(width, height uint16) {
+	if t.Framebuffer == 0 {
 		panic("do not resize primary rendertarget")
 	}
 	t.width = width
 	t.height = height
-	gl.BindFramebuffer(gl.FRAMEBUFFER, t.framebufferID)
-	if t.multisample {
+	t.cxt.BindFramebuffer(enum.FRAMEBUFFER, t.Framebuffer)
+	if t.Multisample {
 		t.resizeMultisample(width, height)
 	} else {
 		t.resizeNormal(width, height)
 	}
 }
 
-func (t *renderTarget) resizeNormal(width, height uint16) {
+func (t *RenderTarget) resizeNormal(width, height uint16) {
 	// bind texture
-	gl.BindTexture(gl.TEXTURE_2D, t.textureID)
+	t.cxt.BindTexture(enum.TEXTURE_2D, t.DrawBuffer)
 	// init texture
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, int32(width), int32(height), 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
+	t.cxt.TexImage2D(enum.TEXTURE_2D, 0, enum.RGB, int32(width), int32(height), 0, enum.RGB, enum.UNSIGNED_BYTE, nil)
 	// bind depthbuffer
-	gl.BindTexture(gl.TEXTURE_2D, t.depthID)
+	t.cxt.BindTexture(enum.TEXTURE_2D, t.DepthBuffer)
 	// init depthbuffer
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32, int32(width), int32(height), 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, nil)
+	t.cxt.TexImage2D(enum.TEXTURE_2D, 0, enum.DEPTH_COMPONENT32, int32(width), int32(height), 0, enum.DEPTH_COMPONENT, enum.UNSIGNED_INT, nil)
 	// add to framebuffer
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t.textureID, 0)
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, t.depthID, 0)
+	t.cxt.FramebufferTexture2D(enum.FRAMEBUFFER, enum.COLOR_ATTACHMENT0, enum.TEXTURE_2D, t.DrawBuffer, 0)
+	t.cxt.FramebufferTexture2D(enum.FRAMEBUFFER, enum.DEPTH_ATTACHMENT, enum.TEXTURE_2D, t.DepthBuffer, 0)
 }
 
-func (t *renderTarget) resizeMultisample(width, height uint16) {
+func (t *RenderTarget) resizeMultisample(width, height uint16) {
 	// bind texture
-	gl.BindRenderbuffer(gl.RENDERBUFFER, t.textureID)
+	t.cxt.BindRenderbuffer(enum.RENDERBUFFER, t.DrawBuffer)
 	// init texture
-	gl.RenderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.RGB, int32(width), int32(height))
+	t.cxt.RenderbufferStorageMultisample(enum.RENDERBUFFER, 4, enum.RGB, int32(width), int32(height))
 	// bind depthbuffer
-	gl.BindRenderbuffer(gl.RENDERBUFFER, t.depthID)
+	t.cxt.BindRenderbuffer(enum.RENDERBUFFER, t.DepthBuffer)
 	// init depthbuffer
-	gl.RenderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.DEPTH_COMPONENT32, int32(width), int32(height))
+	t.cxt.RenderbufferStorageMultisample(enum.RENDERBUFFER, 4, enum.DEPTH_COMPONENT32, int32(width), int32(height))
 	// add to framebuffer
-	gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, t.textureID)
-	gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, t.depthID)
+	t.cxt.FramebufferRenderbuffer(enum.FRAMEBUFFER, enum.COLOR_ATTACHMENT0, enum.RENDERBUFFER, t.DrawBuffer)
+	t.cxt.FramebufferRenderbuffer(enum.FRAMEBUFFER, enum.DEPTH_ATTACHMENT, enum.RENDERBUFFER, t.DepthBuffer)
 }
 
-func getRenderTarget(target render.RenderTarget) *renderTarget {
-	switch t := target.(type) {
-	case *renderTarget:
-		return t
-	case *primaryRenderTarget:
-		return t.renderTarget
-	}
-	return nil
-}
-
-func (t *renderTarget) BlitTo(target render.RenderTarget, x, y int32) {
-	tar := getRenderTarget(target)
-	if tar.multisample {
+func (t *RenderTarget) BlitTo(target render.RenderTarget, x, y int32) {
+	tar, _ := GLRenderTarget(target)
+	if tar.Multisample {
 		panic("Do not blit to multisampled target!")
 	}
-	gl.BindFramebuffer(gl.READ_FRAMEBUFFER, t.framebufferID)
-	gl.BindFramebuffer(gl.DRAW_FRAMEBUFFER, tar.framebufferID)
+	t.cxt.BindFramebuffer(enum.READ_FRAMEBUFFER, t.Framebuffer)
+	t.cxt.BindFramebuffer(enum.DRAW_FRAMEBUFFER, tar.Framebuffer)
 	// using target, because it might be a primarytarget
 	y = int32(target.Height()) - int32(t.Height()) - y
-	gl.BlitFramebuffer(0, 0, int32(t.Width()), int32(t.Height()), int32(x), int32(y), x+int32(t.Width()), y+int32(t.Height()), gl.COLOR_BUFFER_BIT, gl.LINEAR)
+	t.cxt.BlitFramebuffer(0, 0, int32(t.Width()), int32(t.Height()), int32(x), int32(y), x+int32(t.Width()), y+int32(t.Height()), enum.COLOR_BUFFER_BIT, enum.LINEAR)
 }

@@ -11,7 +11,7 @@ type Context interface {
 	CreateFramebuffer() any
 	CreateProgram() any
 	CreateRenderbuffer() any
-	CreateShader() any
+	CreateShader(xtype uint32) any
 	CreateTexture() any
 	CreateVertexArray() any
 
@@ -31,7 +31,7 @@ type Context interface {
 
 	AttachShader(program any, shader any)
 	BlitFramebuffer(srcX0 int32, srcY0 int32, srcX1 int32, srcY1 int32, dstX0 int32, dstY0 int32, dstX1 int32, dstY1 int32, mask uint32, filter uint32)
-	BufferData(taregt uint32, data any, usage uint32)
+	BufferData(target uint32, data any, usage uint32)
 	Clear(mask uint32)
 	ClearColor(r, g, b, a float32)
 	ClearDepth(depth float64)

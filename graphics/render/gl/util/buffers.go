@@ -5,10 +5,10 @@ import (
 	"github.com/eliiasg/deltawing/util/buffers"
 )
 
-// returns verts, inds, start positions for verts, start positions for inds
+// returns verts, inds, start positions for inds
 // inds are 32 bit unsigned
 // verts are: 32 bit float x, 32 bit float y, 24 bit color (rgb), 8 bit layer
-func CompileVecSpriteBuffer(sprites []*vecsprite.VecSprite) ([]uint32, []uint32, []uint32, []uint32) {
+func CompileVecSpriteBuffer(sprites []*vecsprite.VecSprite) ([]uint32, []uint32, []uint32) {
 	// counting at start for optimization
 	// counting only iterates sprites, not verts and inds
 	// maybe this would be called premature optimization
@@ -17,12 +17,10 @@ func CompileVecSpriteBuffer(sprites []*vecsprite.VecSprite) ([]uint32, []uint32,
 	verts := make([]uint32, 0, numVerts)
 	inds := make([]uint32, 0, numInds)
 	var vertPos, idxPos uint32
-	vertPositions := make([]uint32, 0, len(sprites)+1)
 	idxPositions := make([]uint32, 0, len(sprites)+1)
 
 	for _, sprite := range sprites {
 		addSprite(&verts, &inds, sprite)
-		vertPositions = append(vertPositions, vertPos)
 		idxPositions = append(idxPositions, idxPos)
 		// incrementing after since positions start at 0
 		vertPos += uint32(len(sprite.Vertices))
@@ -30,10 +28,9 @@ func CompileVecSpriteBuffer(sprites []*vecsprite.VecSprite) ([]uint32, []uint32,
 	}
 
 	// appending at end because it should be possible to get the size of the last sprite
-	vertPositions = append(vertPositions, vertPos)
 	idxPositions = append(idxPositions, idxPos)
 
-	return verts, inds, vertPositions, idxPositions
+	return verts, inds, idxPositions
 }
 
 func addSprite(verts, inds *[]uint32, sprite *vecsprite.VecSprite) {

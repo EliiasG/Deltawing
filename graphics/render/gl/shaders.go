@@ -3,16 +3,16 @@ package gl
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/eliiasg/deltawing/graphics/render"
 	"github.com/eliiasg/deltawing/graphics/render/gl/shader"
 	"github.com/eliiasg/deltawing/internal/rendering/shader_sources"
-	"github.com/eliiasg/glow/v3.3-core/gl"
+	"github.com/eliiasg/glow/enum"
 )
 
 type procedureBuilder struct {
-	sb *shader.ShaderBuilder
+	cxt Context
+	sb  *shader.ShaderBuilder
 }
 
 func (r *Renderer) MakeProcedureBuilder() render.ProcedureBuilder {
@@ -28,7 +28,7 @@ func (r *Renderer) MakeProcedureBuilder() render.ProcedureBuilder {
 			{Name: "yAxis", Type: render.Type(render.ShaderFloat, 2), DefaultValue: "vec2(0, 1)"},
 		},
 	}
-	return &procedureBuilder{shader.NewShaderBuilder(source)}
+	return &procedureBuilder{r.cxt, shader.NewShaderBuilder(source)}
 }
 
 func (p *procedureBuilder) AddAttributeChannel(shaderType render.ShaderType) render.Channel {
@@ -72,97 +72,84 @@ func (p *procedureBuilder) Finish() (render.Procedure, error) {
 	if err != nil {
 		return nil, err
 	}
-	return compileProgram(vertSource, attribTypes)
+	return compileProgram(p.cxt, vertSource, attribTypes)
 }
 
-type procedure struct {
+type Procedure struct {
 	render.ProcedureIdentifier
-	progID             uint32
-	screenSizeLocation int32
-	attribChannels     map[render.Channel]shader.AttribChannelInfo
+	cxt Context
+	// Shader program object
+	Prog any
+	// Uniform location of screen size
+	ScreenSizeLocation any
+	// Uniform channel
+	AttribChannels map[render.Channel]shader.AttribChannelInfo
 }
 
-func (p *procedure) Free() {
-	gl.DeleteProgram(p.progID)
+func (p *Procedure) Free() {
+	p.cxt.DeleteProgram(p.Prog)
 }
 
 // will be called by the ShaderBuilder
-func compileProgram(vertSource string, attribTypes map[render.Channel]shader.AttribChannelInfo) (render.Procedure, error) {
+func compileProgram(cxt Context, vertSource string, attribTypes map[render.Channel]shader.AttribChannelInfo) (render.Procedure, error) {
 	// vertex shader
-	vert, err := compileShader(gl.VERTEX_SHADER, vertSource)
+	vert, err := compileShader(cxt, enum.VERTEX_SHADER, vertSource)
 	if err != nil {
 		return nil, err
 	}
 	// fragment shader
 	// FIXME fragment shader is not generated at runtime, so maybe only compile once
-	frag, err := compileShader(gl.FRAGMENT_SHADER, shader_sources.FragmentSource)
+	frag, err := compileShader(cxt, enum.FRAGMENT_SHADER, shader_sources.FragmentSource)
 	if err != nil {
 		return nil, err
 	}
 	// program
-	prog, err := createProgram(vert, frag)
+	prog, err := createProgram(cxt, vert, frag)
 	if err != nil {
 		return nil, err
 	}
 	// delete shaders (program is not deleted)
-	gl.DeleteShader(vert)
-	gl.DeleteShader(frag)
+	cxt.DeleteShader(vert)
+	cxt.DeleteShader(frag)
 	// get size uniform location
-	sizeLoc := gl.GetUniformLocation(prog, gl.Str("screenSize\x00"))
-	return &procedure{progID: prog, screenSizeLocation: sizeLoc, attribChannels: attribTypes}, nil
+	sizeLoc := cxt.GetUniformLocation(prog, "screenSize\x00")
+	return &Procedure{Prog: prog, ScreenSizeLocation: sizeLoc, AttribChannels: attribTypes}, nil
 }
 
-func createProgram(vertShader, fragShader uint32) (uint32, error) {
+func createProgram(cxt Context, vertShader, fragShader any) (any, error) {
 	// make and link
-	prog := gl.CreateProgram()
-	gl.AttachShader(prog, vertShader)
-	gl.AttachShader(prog, fragShader)
-	gl.LinkProgram(prog)
+	prog := cxt.CreateProgram()
+	cxt.AttachShader(prog, vertShader)
+	cxt.AttachShader(prog, fragShader)
+	cxt.LinkProgram(prog)
 
 	// ckeck for error
-	var status int32
-	gl.GetProgramiv(prog, gl.LINK_STATUS, &status)
-	if status == gl.FALSE {
-		// get log length
-		var logLength int32
-		gl.GetProgramiv(prog, gl.INFO_LOG_LENGTH, &logLength)
-
+	status := cxt.GetProgramParameter(prog, enum.LINK_STATUS)
+	if status == enum.FALSE {
 		// get error
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetProgramInfoLog(prog, logLength, nil, gl.Str(log))
-
+		log := cxt.GetProgramInfoLog(prog)
 		return 0, errors.New(fmt.Sprintf("Program linking failed:\n%v", log))
 	}
 	return prog, nil
 }
 
-func compileShader(typ uint32, source string) (uint32, error) {
+func compileShader(cxt Context, typ uint32, source string) (any, error) {
 	// make and compile shader
-	shader := gl.CreateShader(typ)
-	cSource, free := gl.Strs(source)
-	gl.ShaderSource(shader, 1, cSource, nil)
-	free()
-	gl.CompileShader(shader)
+	shader := cxt.CreateShader(typ)
+	cxt.ShaderSource(shader, source)
+	cxt.CompileShader(shader)
 	// check for error
-	err := getShaderError(shader)
+	err := getShaderError(cxt, shader)
 	if err != "" {
 		return 0, errors.New(fmt.Sprintf("Failed to compile shader:\n%v\nWith error:\n%v", source, err))
 	}
 	return shader, nil
 }
 
-func getShaderError(shader uint32) string {
-	var status int32
-	// get status
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
-	if status == gl.FALSE {
-		// get log length
-		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-		// get log
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-		return log
+func getShaderError(cxt Context, shader any) string {
+	status := cxt.GetShaderParameter(shader, enum.COMPILE_STATUS)
+	if status == enum.FALSE {
+		return cxt.GetShaderInfoLog(shader)
 	}
 	return ""
 }
