@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	r "github.com/eliiasg/deltawing/graphics/render"
-	"github.com/eliiasg/deltawing/internal/rendering/shader_sources"
 )
 
 type Channel struct {
@@ -189,7 +188,7 @@ func (s *ShaderBuilder) SetOutputChannel(varName string, channel r.Channel) erro
 var typeMap = map[r.ChannelShaderType][2]string{
 	r.ShaderFloat:       {"float", "vec"},
 	r.ShaderInt:         {"int", "ivec"},
-	r.ShaderUnsignedInt: {"uint", "uvec"},
+	r.ShaderUnsignedInt: {"highp uint", "uvec"},
 }
 
 func getGLSLTypeName(typ r.ShaderType) string {
@@ -303,17 +302,17 @@ func (s *ShaderBuilder) composeVars(oldnew *[]string) error {
 	return nil
 }
 
-func (s *ShaderBuilder) Finish() (string, map[r.Channel]AttribChannelInfo, error) {
+func (s *ShaderBuilder) Finish() (string, map[r.Channel]AttribChannelInfo, []string, error) {
 	oldnew := make([]string, 0)
 	// sections
 	err := s.composeSections(s.baseSource, &oldnew)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	// vars
 	err = s.composeVars(&oldnew)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	shader := strings.NewReplacer(oldnew...).Replace(s.baseSource)
 	// make sure to properly end shader with escape char
@@ -321,7 +320,7 @@ func (s *ShaderBuilder) Finish() (string, map[r.Channel]AttribChannelInfo, error
 		shader += "\x00"
 	}
 
-	return shader, s.getAttribTypes(), nil
+	return shader, s.getAttribTypes(), s.getUniformNames(), nil
 }
 
 type AttribChannelInfo struct {
@@ -332,7 +331,15 @@ type AttribChannelInfo struct {
 func (s *ShaderBuilder) getAttribTypes() map[r.Channel]AttribChannelInfo {
 	res := make(map[r.Channel]AttribChannelInfo)
 	for i, channel := range s.attribChans {
-		res[channel] = AttribChannelInfo{channel.varType, uint32(i) + shader_sources.VertexBaseInputAmt}
+		res[channel] = AttribChannelInfo{channel.varType, uint32(i) + uint32(s.startPos)}
+	}
+	return res
+}
+
+func (s *ShaderBuilder) getUniformNames() []string {
+	res := make([]string, 0, len(s.operChans))
+	for _, channel := range s.operChans {
+		res = append(res, channel.Name())
 	}
 	return res
 }

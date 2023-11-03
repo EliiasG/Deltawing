@@ -30,11 +30,11 @@ type Context interface {
 	BindVertexArray(array any)
 
 	AttachShader(program any, shader any)
+	// WARNING: might override bound TEXTURE_2D in webgl
 	BlitFramebuffer(srcX0 int32, srcY0 int32, srcX1 int32, srcY1 int32, dstX0 int32, dstY0 int32, dstX1 int32, dstY1 int32, mask uint32, filter uint32)
 	BufferData(target uint32, data any, usage uint32)
 	Clear(mask uint32)
 	ClearColor(r, g, b, a float32)
-	ClearDepth(depth float64)
 	CompileShader(shader any)
 	DrawElementsInstanced(mode uint32, count int32, xtype uint32, indexOffset uintptr, instancecount int32)
 	EnableVertexAttribArray(index uint32)
@@ -44,7 +44,7 @@ type Context interface {
 	GetProgramParameter(program any, pname uint32) int32
 	GetShaderInfoLog(shader any) string
 	GetShaderParameter(shader any, pname uint32) int32
-	GetUniformLocation(shader any, name string) any
+	GetUniformLocation(program any, name string) any
 	LinkProgram(program any)
 	RenderbufferStorageMultisample(target uint32, samples int32, internalformat uint32, width int32, height int32)
 	ShaderSource(shader any, source string)

@@ -61,12 +61,16 @@ func (s *spriteBufferBuilder) Finish() render.SpriteBuffer {
 	sb.Verts = s.cxt.CreateBuffer()
 	s.cxt.BindBuffer(enum.ARRAY_BUFFER, sb.Verts)
 	// only * 4 because type is slice of uint32
-	s.cxt.BufferData(enum.ARRAY_BUFFER, verts, enum.STATIC_DRAW)
+	if len(verts) > 0 {
+		s.cxt.BufferData(enum.ARRAY_BUFFER, verts, enum.STATIC_DRAW)
+	}
 
 	// index buffer
 	sb.Inds = s.cxt.CreateBuffer()
 	s.cxt.BindBuffer(enum.ELEMENT_ARRAY_BUFFER, sb.Inds)
-	s.cxt.BufferData(enum.ELEMENT_ARRAY_BUFFER, inds, enum.STATIC_DRAW)
+	if len(inds) > 0 {
+		s.cxt.BufferData(enum.ELEMENT_ARRAY_BUFFER, inds, enum.STATIC_DRAW)
+	}
 	return sb
 }
 

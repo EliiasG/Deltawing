@@ -1,3 +1,6 @@
+//go:build cgo
+// +build cgo
+
 package glfw
 
 import (
@@ -64,5 +67,7 @@ func NewProgram(width, height uint16, name string) program.Program {
 			return uint16(height)
 		},
 		opengl.MakeContext(),
+		"#version 330 core",
+		false,
 	)}
 }

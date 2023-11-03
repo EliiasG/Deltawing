@@ -120,7 +120,7 @@ func (t *RenderTarget) resizeNormal(width, height uint16) {
 	// bind depthbuffer
 	t.cxt.BindTexture(enum.TEXTURE_2D, t.DepthBuffer)
 	// init depthbuffer
-	t.cxt.TexImage2D(enum.TEXTURE_2D, 0, enum.DEPTH_COMPONENT32, int32(width), int32(height), 0, enum.DEPTH_COMPONENT, enum.UNSIGNED_INT, nil)
+	t.cxt.TexImage2D(enum.TEXTURE_2D, 0, enum.DEPTH_COMPONENT32F, int32(width), int32(height), 0, enum.DEPTH_COMPONENT, enum.FLOAT, nil)
 	// add to framebuffer
 	t.cxt.FramebufferTexture2D(enum.FRAMEBUFFER, enum.COLOR_ATTACHMENT0, enum.TEXTURE_2D, t.DrawBuffer, 0)
 	t.cxt.FramebufferTexture2D(enum.FRAMEBUFFER, enum.DEPTH_ATTACHMENT, enum.TEXTURE_2D, t.DepthBuffer, 0)
@@ -130,11 +130,11 @@ func (t *RenderTarget) resizeMultisample(width, height uint16) {
 	// bind texture
 	t.cxt.BindRenderbuffer(enum.RENDERBUFFER, t.DrawBuffer)
 	// init texture
-	t.cxt.RenderbufferStorageMultisample(enum.RENDERBUFFER, 4, enum.RGB, int32(width), int32(height))
+	t.cxt.RenderbufferStorageMultisample(enum.RENDERBUFFER, 4, enum.RGB8, int32(width), int32(height))
 	// bind depthbuffer
 	t.cxt.BindRenderbuffer(enum.RENDERBUFFER, t.DepthBuffer)
 	// init depthbuffer
-	t.cxt.RenderbufferStorageMultisample(enum.RENDERBUFFER, 4, enum.DEPTH_COMPONENT32, int32(width), int32(height))
+	t.cxt.RenderbufferStorageMultisample(enum.RENDERBUFFER, 4, enum.DEPTH_COMPONENT32F, int32(width), int32(height))
 	// add to framebuffer
 	t.cxt.FramebufferRenderbuffer(enum.FRAMEBUFFER, enum.COLOR_ATTACHMENT0, enum.RENDERBUFFER, t.DrawBuffer)
 	t.cxt.FramebufferRenderbuffer(enum.FRAMEBUFFER, enum.DEPTH_ATTACHMENT, enum.RENDERBUFFER, t.DepthBuffer)
@@ -145,6 +145,7 @@ func (t *RenderTarget) BlitTo(target render.RenderTarget, x, y int32) {
 	if tar.Multisample {
 		panic("Do not blit to multisampled target!")
 	}
+	t.cxt.BindFramebuffer(enum.FRAMEBUFFER, nil)
 	t.cxt.BindFramebuffer(enum.READ_FRAMEBUFFER, t.Framebuffer)
 	t.cxt.BindFramebuffer(enum.DRAW_FRAMEBUFFER, tar.Framebuffer)
 	// using target, because it might be a primarytarget

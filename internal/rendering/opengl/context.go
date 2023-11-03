@@ -1,3 +1,6 @@
+//go:build cgo
+// +build cgo
+
 package opengl
 
 import (
@@ -153,10 +156,6 @@ func (c context) ClearColor(r float32, g float32, b float32, a float32) {
 	gl.ClearColor(r, g, b, a)
 }
 
-func (c context) ClearDepth(depth float64) {
-	gl.ClearDepth(depth)
-}
-
 func (c context) CompileShader(shader any) {
 	gl.CompileShader(glObj(shader))
 }
@@ -212,7 +211,7 @@ func (c context) GetShaderParameter(shader any, pname uint32) int32 {
 }
 
 func (c context) GetUniformLocation(program any, name string) any {
-	return gl.GetUniformLocation(glObj(program), gl.Str(name))
+	return gl.GetUniformLocation(glObj(program), gl.Str(name+"\x00"))
 }
 
 func (c context) LinkProgram(program any) {

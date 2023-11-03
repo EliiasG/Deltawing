@@ -15,8 +15,8 @@ type Operation struct {
 	InstanceAmt uint32
 	// Procedure to use for drawing
 	Proc *Procedure
-	// Parameters for uniforms: map[uniform location]uniform value
-	UniformParams map[any]any
+	// Parameters for uniforms
+	UniformParams map[string]any
 	// Start index of sprite in
 	SpriteIdxStart int32
 	// Amount of indices in sprite
@@ -29,7 +29,7 @@ func GLOperation(o render.Operation) (*Operation, bool) {
 }
 
 func (r *Renderer) MakeOperation(proc render.Procedure) render.Operation {
-	return &Operation{r.cxt, r.cxt.CreateVertexArray(), 0, proc.(*Procedure), make(map[any]any), 0, 0}
+	return &Operation{r.cxt, r.cxt.CreateVertexArray(), 0, proc.(*Procedure), make(map[string]any), 0, 0}
 }
 
 func (o *Operation) Free() {
@@ -51,6 +51,7 @@ func (o *Operation) SetInstanceAttribute(channel render.Channel, buffer render.D
 	o.cxt.BindVertexArray(o.Vao)
 	o.cxt.BindBuffer(enum.ARRAY_BUFFER, buf.Buffer)
 	// setup
+
 	typ := buf.Layout[index]
 	// layout index
 	o.cxt.EnableVertexAttribArray(channelInfo.Index)
@@ -62,6 +63,7 @@ func (o *Operation) SetInstanceAttribute(channel render.Channel, buffer render.D
 		o.cxt.VertexAttribPointer(channelInfo.Index, int32(typ.Amount), glType(typ.Type), false, int32(buf.LayoutSize), off)
 	}
 	o.cxt.VertexAttribDivisor(channelInfo.Index, 1)
+
 }
 
 // very exiting function
@@ -91,12 +93,13 @@ func glType(typ render.ChannelInputType) uint32 {
 
 func (o *Operation) SetChannelValue(channel render.Channel, data any) {
 	glChan := shader.GLChannel(channel)
-	uniform := o.cxt.GetUniformLocation(o.Proc.Prog, glChan.Name()+"\x00")
+	//uniform := o.cxt.GetUniformLocation(o.Proc.Prog, glChan.Name())
 	if !util.AssertType(glChan.ShaderType(), data) {
 		// Maybe bad?
 		panic("Unable to set channel value: Invalid type")
 	}
-	o.UniformParams[uniform] = data
+	// set param
+	o.UniformParams[glChan.Name()] = data
 }
 
 func (o *Operation) DrawTo(target render.RenderTarget) {
@@ -116,8 +119,8 @@ func (o *Operation) bind(target render.RenderTarget) {
 }
 
 func (o *Operation) initShader(width, height uint16) {
-	for location, value := range o.UniformParams {
-		setUniform(o.cxt, location, value)
+	for name, param := range o.UniformParams {
+		setUniform(o.cxt, o.Proc.UniformLocations[name], param)
 	}
 	setUniform(o.cxt, o.Proc.ScreenSizeLocation, [2]int32{int32(width), int32(height)})
 }

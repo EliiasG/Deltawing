@@ -3,6 +3,7 @@ package gl
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/eliiasg/deltawing/graphics/render"
 	"github.com/eliiasg/deltawing/graphics/render/gl/shader"
@@ -11,15 +12,16 @@ import (
 )
 
 type procedureBuilder struct {
-	cxt Context
-	sb  *shader.ShaderBuilder
+	cxt     Context
+	sb      *shader.ShaderBuilder
+	version string
 }
 
 func (r *Renderer) MakeProcedureBuilder() render.ProcedureBuilder {
 	source := shader.ShaderSource{
 		SourceCode:     shader_sources.VertexBaseSource,
 		LayoutStartPos: 2,
-		Version:        "#version 330 core",
+		Version:        r.version,
 		Variables: []shader.Variable{
 			{Name: "pos", Type: render.Type(render.ShaderFloat, 2), DefaultValue: ""},
 			{Name: "layer", Type: render.Type(render.ShaderUnsignedInt, 1), DefaultValue: ""},
@@ -28,7 +30,7 @@ func (r *Renderer) MakeProcedureBuilder() render.ProcedureBuilder {
 			{Name: "yAxis", Type: render.Type(render.ShaderFloat, 2), DefaultValue: "vec2(0, 1)"},
 		},
 	}
-	return &procedureBuilder{r.cxt, shader.NewShaderBuilder(source)}
+	return &procedureBuilder{r.cxt, shader.NewShaderBuilder(source), r.version}
 }
 
 func (p *procedureBuilder) AddAttributeChannel(shaderType render.ShaderType) render.Channel {
@@ -68,11 +70,11 @@ func (p *procedureBuilder) SetYAxisChannel(channel render.Channel) error {
 }
 
 func (p *procedureBuilder) Finish() (render.Procedure, error) {
-	vertSource, attribTypes, err := p.sb.Finish()
+	vertSource, attribTypes, uniformNames, err := p.sb.Finish()
 	if err != nil {
 		return nil, err
 	}
-	return compileProgram(p.cxt, vertSource, attribTypes)
+	return compileProgram(p.cxt, p.version, vertSource, attribTypes, uniformNames)
 }
 
 type Procedure struct {
@@ -82,24 +84,26 @@ type Procedure struct {
 	Prog any
 	// Uniform location of screen size
 	ScreenSizeLocation any
-	// Uniform channel
+	// Attribute channels
 	AttribChannels map[render.Channel]shader.AttribChannelInfo
+	// Uniform locations
+	UniformLocations map[string]any
 }
 
 func (p *Procedure) Free() {
 	p.cxt.DeleteProgram(p.Prog)
 }
 
-// will be called by the ShaderBuilder
-func compileProgram(cxt Context, vertSource string, attribTypes map[render.Channel]shader.AttribChannelInfo) (render.Procedure, error) {
+func compileProgram(cxt Context, version string, vertSource string, attribTypes map[render.Channel]shader.AttribChannelInfo, uniformNames []string) (render.Procedure, error) {
 	// vertex shader
 	vert, err := compileShader(cxt, enum.VERTEX_SHADER, vertSource)
 	if err != nil {
 		return nil, err
 	}
 	// fragment shader
-	// FIXME fragment shader is not generated at runtime, so maybe only compile once
-	frag, err := compileShader(cxt, enum.FRAGMENT_SHADER, shader_sources.FragmentSource)
+	// FIXME fragment shader is not changed, so maybe only compile once
+	fragSource := strings.Replace(shader_sources.FragmentSource, "<version>", version, 1)
+	frag, err := compileShader(cxt, enum.FRAGMENT_SHADER, fragSource)
 	if err != nil {
 		return nil, err
 	}
@@ -112,8 +116,13 @@ func compileProgram(cxt Context, vertSource string, attribTypes map[render.Chann
 	cxt.DeleteShader(vert)
 	cxt.DeleteShader(frag)
 	// get size uniform location
-	sizeLoc := cxt.GetUniformLocation(prog, "screenSize\x00")
-	return &Procedure{Prog: prog, ScreenSizeLocation: sizeLoc, AttribChannels: attribTypes}, nil
+	sizeLoc := cxt.GetUniformLocation(prog, "screenSize")
+	// get uniform locations
+	uniformLocations := make(map[string]any)
+	for _, name := range uniformNames {
+		uniformLocations[name] = cxt.GetUniformLocation(prog, name)
+	}
+	return &Procedure{Prog: prog, ScreenSizeLocation: sizeLoc, AttribChannels: attribTypes, UniformLocations: uniformLocations}, nil
 }
 
 func createProgram(cxt Context, vertShader, fragShader any) (any, error) {
