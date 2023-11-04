@@ -63,7 +63,7 @@ func initApp(init func(app.App), update func()) {
 	a := &webApp{
 		renderer:   r,
 		updateFunc: update,
-		kb:         &keyboard{},
+		kb:         makeKeyboard(),
 		canvas:     canvas,
 	}
 	// catch init error
