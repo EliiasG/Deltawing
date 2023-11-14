@@ -1,3 +1,6 @@
+//go:build wasm
+// +build wasm
+
 package web
 
 import (
@@ -7,10 +10,10 @@ import (
 )
 
 type keyboard struct {
-	keyPressedHandler   func(input.Key)
-	keyReleaseddHandler func(input.Key)
-	keyHeldHandler      func(input.Key)
-	keyTypedHandler     func(rune)
+	keyPressedHandler  func(input.Key)
+	keyReleasedHandler func(input.Key)
+	keyHeldHandler     func(input.Key)
+	keyTypedHandler    func(rune)
 }
 
 func makeKeyboard() *keyboard {
@@ -64,11 +67,11 @@ func (k *keyboard) SetKeyPressedHandler(handler func(input.Key)) {
 }
 
 func (k *keyboard) SetKeyReleasedHandler(handler func(input.Key)) {
-	k.keyReleaseddHandler = handler
+	k.keyReleasedHandler = handler
 }
 
 func (k *keyboard) SetKeyHeldHandler(handler func(input.Key)) {
-	k.keyPressedHandler = handler
+	k.keyHeldHandler = handler
 }
 
 func (k *keyboard) SetKeyTypedHandler(handler func(rune)) {

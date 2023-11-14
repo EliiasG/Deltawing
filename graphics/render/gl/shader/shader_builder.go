@@ -188,7 +188,7 @@ func (s *ShaderBuilder) SetOutputChannel(varName string, channel r.Channel) erro
 var typeMap = map[r.ChannelShaderType][2]string{
 	r.ShaderFloat:       {"float", "vec"},
 	r.ShaderInt:         {"int", "ivec"},
-	r.ShaderUnsignedInt: {"highp uint", "uvec"},
+	r.ShaderUnsignedInt: {"uint", "uvec"},
 }
 
 func getGLSLTypeName(typ r.ShaderType) string {

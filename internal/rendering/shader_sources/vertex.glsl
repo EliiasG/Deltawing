@@ -29,6 +29,6 @@ void main() {
         //0.0, 0.0, 0.0, 1.0
     );
 
-    vertexColor = vec4(vec3(<color>)/256.0, 1.0);
+    vertexColor = vec4(<color>)/255.0;
     layer = <layer>*256u + aColor.a+1u;
 }

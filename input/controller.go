@@ -2,8 +2,13 @@ package input
 
 // GLFW does not seem to support controller rumble, not sure about web
 type Controller interface {
-	GetAxis(controllerID uint16, axis ControllerAxis)
-	GetButton(controllerID uint16, button ControllerButton)
+	// nil if no controller
+	GetState(id uint16) ControllerState
+}
+
+type ControllerState interface {
+	GetAxis(axis ControllerAxis) float32
+	GetButton(button ControllerButton) bool
 }
 
 type ControllerAxis int32
@@ -33,7 +38,7 @@ const (
 	ControllerLeftThumb
 	ControllerRightThumb
 	ControllerDPadUp
+	ControllerDPadRight
 	ControllerDPadDown
 	ControllerDPadLeft
-	ControllerDPadRight
 )

@@ -25,7 +25,7 @@ func (r *Renderer) MakeProcedureBuilder() render.ProcedureBuilder {
 		Variables: []shader.Variable{
 			{Name: "pos", Type: render.Type(render.ShaderFloat, 2), DefaultValue: ""},
 			{Name: "layer", Type: render.Type(render.ShaderUnsignedInt, 1), DefaultValue: ""},
-			{Name: "color", Type: render.Type(render.ShaderInt, 3), DefaultValue: "aColor.rgb"},
+			{Name: "color", Type: render.Type(render.ShaderInt, 4), DefaultValue: "vec4(aColor.rgb, 255)"},
 			{Name: "xAxis", Type: render.Type(render.ShaderFloat, 2), DefaultValue: "vec2(1, 0)"},
 			{Name: "yAxis", Type: render.Type(render.ShaderFloat, 2), DefaultValue: "vec2(0, 1)"},
 		},

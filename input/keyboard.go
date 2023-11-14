@@ -9,7 +9,7 @@ type Keyboard interface {
 
 type Key int32
 
-// Maybe i should just une constants fronm glfw, but i did not want this to be related to glfw
+// Maybe i should just use constants fronm glfw, but i did not want this to be related to glfw
 // Generated from glfw keys, by python and aligned by go fmt
 
 const (

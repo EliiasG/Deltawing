@@ -194,7 +194,7 @@ type ProcedureBuilder interface {
 	// Set the channel to use for the layer, must be an uint
 	SetLayerChannel(channel Channel) error
 
-	// Set the channel tp use for the color, must be 3 ints - if not set aColor.rgb variable be used
+	// Set the channel tp use for the color, must be 3 ints - if not set ivec4(aColor.rgb, 255) variable be used
 	SetColorChannel(channel Channel) error
 
 	// Use following methods for scaling and rotation, must be 2 floats per channel

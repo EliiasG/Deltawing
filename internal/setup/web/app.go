@@ -20,7 +20,9 @@ import (
 type webApp struct {
 	time       float64
 	renderer   *gl.Renderer
-	kb         *keyboard
+	keyboard   *keyboard
+	mouse      *mouse
+	controller *controller
 	updateFunc func()
 	jsUpdate   js.Func
 	canvas     js.Value
@@ -41,6 +43,12 @@ func initApp(init func(app.App), update func()) {
 	// remove border
 	body.Get("style").Call("setProperty", "margin", 0)
 	body.Get("style").Call("setProperty", "overflow", "hidden")
+	// disable rightclick menu
+	body.Set("oncontextmenu", js.FuncOf(
+		func(this js.Value, args []js.Value) any {
+			return false
+		},
+	))
 	// init gl
 	canvas := doc.Call("createElement", "canvas")
 	g := initGl(doc, canvas)
@@ -63,7 +71,9 @@ func initApp(init func(app.App), update func()) {
 	a := &webApp{
 		renderer:   r,
 		updateFunc: update,
-		kb:         makeKeyboard(),
+		keyboard:   makeKeyboard(),
+		mouse:      makeMouse(),
+		controller: makeController(),
 		canvas:     canvas,
 	}
 	// catch init error
@@ -121,13 +131,13 @@ func (w *webApp) Time() float64 {
 }
 
 func (w *webApp) Keyboard() input.Keyboard {
-	return w.kb
+	return w.keyboard
 }
 
 func (w *webApp) Mouse() input.Mouse {
-	panic("unimplemented")
+	return w.mouse
 }
 
 func (w *webApp) Controller() input.Controller {
-	panic("unimplemented")
+	return w.controller
 }

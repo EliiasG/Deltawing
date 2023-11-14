@@ -53,8 +53,10 @@ func NewProgram(width, height uint16, name string) program.Program {
 	// OpenGL setup
 	gl.Enable(gl.DEPTH_TEST)
 	gl.Enable(gl.MULTISAMPLE)
+	gl.Enable(gl.BLEND)
 	gl.Disable(gl.CULL_FACE)
 	gl.DepthFunc(gl.GREATER)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 	gl.ClearDepth(0)
 
 	return &glfwProgram{win, g.NewRenderer(

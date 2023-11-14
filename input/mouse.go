@@ -1,23 +1,29 @@
 package input
 
 type Mouse interface {
-	SetMouseMoveHandler(handler func(float64, float64))
-	SetMouseClickHandler(handler func(MouseButton))
-	SetMouseReleaseHandler(handler func(MouseButton))
-	SetMouseScrollHandler(handler func(float64))
-
-	SetCursorStyle(CursorStyle)
+	SetMoveHandler(handler func(float64, float64))
+	SetClickHandler(handler func(MouseButton))
+	SetReleaseHandler(handler func(MouseButton))
+	// positive values mean upwards scroll
+	SetScrollHandler(handler func(float64))
+	CursorLocked() bool
+	// Locks and hides the cursor, this will make the arguments of the mouse handler be the amount the mouse moved
+	LockCursor()
+	UnlockCursor()
+	// unlocks cursor
+	SetCursorStyle(style CursorStyle)
 }
 
 type CursorStyle int32
 
 const (
-	Arrow CursorStyle = iota
-	IBeam
-	CrossHair
-	Hand
-	HResize
-	VResize
+	CursorArrow CursorStyle = iota
+	CursorIBeam
+	CursorCrossHair
+	CursorHand
+	CursorHResize
+	CursorVResize
+	CursorHidden
 )
 
 type MouseButton int32

@@ -13,6 +13,8 @@ type window struct {
 	glfwWin     *glfw.Window
 	sizeHandler func(uint16, uint16)
 	keyboard    *keyboard
+	mouse       *mouse
+	controller  controller
 }
 
 func makeWindow(width, height uint16, name string) *window {
@@ -28,7 +30,7 @@ func makeWindow(width, height uint16, name string) *window {
 		panic("Window failed to init with following error: " + e.Error())
 	}
 	// init window
-	win := &window{glfwWin, nil, makeKeyboard(glfwWin)}
+	win := &window{glfwWin, nil, makeKeyboard(glfwWin), makeMouse(glfwWin), makeController()}
 	glfwWin.SetSizeCallback(win.sizeCallback)
 	return win
 }
@@ -101,9 +103,9 @@ func (w *window) Keyboard() input.Keyboard {
 }
 
 func (w *window) Mouse() input.Mouse {
-	panic("not implemented") // TODO: Implement
+	return w.mouse
 }
 
 func (w *window) Controller() input.Controller {
-	panic("not implemented") // TODO: Implement
+	return w.controller
 }
