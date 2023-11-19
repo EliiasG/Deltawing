@@ -56,7 +56,7 @@ func LoadFont(font *trifont.Font, glyphSet string, renderer render.Renderer) (*G
 		idx := builder.AddSprite(SpriteFromGlyph(&char))
 		glyphMap[glyph] = BufferedGlyph{idx, char.Advance}
 	}
-	return &GlyphBuffer{builder.Finish(), glyphMap}, nil
+	return &GlyphBuffer{builder.MakeBuffer(true), glyphMap}, nil
 }
 
 func getGlyphs(font *trifont.Font, glyphSet string) []rune {

@@ -130,7 +130,10 @@ func (s SpriteBufferIdentifier) spriteBuffer() {
 type SpriteBufferBuilder interface {
 	// adds a sprite to the buffer and returns the ID
 	AddSprite(sprite *vecsprite.VecSprite) uint32
-	Finish() SpriteBuffer
+	// static specifies whether the buffer is optimized to not be reallocated
+	MakeBuffer(static bool) SpriteBuffer
+	Reallocate(buffer SpriteBuffer)
+	Clear()
 }
 
 // An image/screen/texture/framebuffer/whatever that can be drawn to.

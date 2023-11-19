@@ -38,7 +38,7 @@ func (o *Operation) Free() {
 
 func (o *Operation) SetInstanceAttribute(channel render.Channel, buffer render.DataBuffer, offset uint32, index uint16) {
 	channelInfo := o.Proc.AttribChannels[channel]
-	buf := buffer.(*dataBuffer)
+	buf := buffer.(*DataBuffer)
 	if len(buf.Layout) == 0 {
 		panic("missing buffer layout")
 	}
